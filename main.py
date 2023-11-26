@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from loginAPI import loginAPI
+from api import loginAPI
 
 teamAnalyticAPIKey = 'RGAPI-5b5ad231-cb44-4bd0-9306-d58dc37ca228'
 # TODO Si migramos la base de datos de local a otro sitio, hay que cambiar el argumento de MongoClient(), ya que

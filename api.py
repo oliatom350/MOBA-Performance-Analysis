@@ -3,8 +3,6 @@ from pymongo.collection import Collection
 import requests
 
 
-# TODO Se podría modificar la función para que utilizara la API de Champion Mastery para incluir un resumen de sus
-#  maestrías como info del jugador
 def loginAPI(collection: Collection[Mapping[str, Any]], api_key, summoner_name):
     # Endpoint de la API para obtener información del invocador por nombre
     summoner_api_url = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name}'
