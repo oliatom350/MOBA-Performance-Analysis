@@ -1,14 +1,16 @@
-from pymongo.collection import Collection
-from typing import Mapping, Any
+from pymongo import MongoClient
 
+# TODO Si migramos la base de datos de local a otro sitio, hay que cambiar el argumento de MongoClient(), ya que
+#  así funciona para localhost:27017
 cliente = MongoClient()
 db = cliente['TFG']
 dbChampions = db['Champions']
 dbMatches = db['Matches']
 dbSummoner = db['Summoners']
 
-def insertarJugador(collection: Collection[Mapping[str, Any]], idSummoner, data):
-    result = collection.update_one(
+
+def insertarJugador(idSummoner, data):
+    result = dbSummoner.update_one(
         {"id": idSummoner},
         {"$setOnInsert": data},
         upsert=True

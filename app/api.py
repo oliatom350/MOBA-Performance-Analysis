@@ -1,10 +1,9 @@
-from typing import Mapping, Any
-from pymongo.collection import Collection
 import re
 import requests
+import database
 
 
-def loginAPI(collection: Collection[Mapping[str, Any]], api_key, summoner_name):
+def loginAPI(api_key, summoner_name):
     # Endpoint de la API para obtener información del invocador por nombre
     summoner_api_url = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name}'
 
@@ -28,7 +27,7 @@ def loginAPI(collection: Collection[Mapping[str, Any]], api_key, summoner_name):
             for champion_mastery in data2:
                 champion_mastery.pop("summonerId", None)
             data["championMasteries"] = data2
-            data
+            database.insertarJugador(summoner_name, data)
 
         else:
             print(f'Error en la solicitud: {response.status_code}')
