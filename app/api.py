@@ -44,3 +44,6 @@ def loginAPI(collection: Collection[Mapping[str, Any]], api_key, summoner_name):
 
     else:
         print(f'Error en la solicitud: {response.status_code}')
+
+
+def updateChampionsDB():
