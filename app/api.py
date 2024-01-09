@@ -1,5 +1,6 @@
 from typing import Mapping, Any
 from pymongo.collection import Collection
+import re
 import requests
 
 
@@ -27,6 +28,7 @@ def loginAPI(collection: Collection[Mapping[str, Any]], api_key, summoner_name):
             for champion_mastery in data2:
                 champion_mastery.pop("summonerId", None)
             data["championMasteries"] = data2
+            # Desde aquí hasta el siguiente else es el procedimiento que tiene que realizar el fichero database.py
             result = collection.update_one(
                 {"id": idSummoner},
                 {"$setOnInsert": data},
@@ -47,3 +49,30 @@ def loginAPI(collection: Collection[Mapping[str, Any]], api_key, summoner_name):
 
 
 def updateChampionsDB():
+    # URL de la página web empleada por Riot Games para publicar el json con todos los campeones del juego
+    championsURL = 'https://developer.riotgames.com/docs/lol#data-dragon_champions'
+
+    # Realiza la solicitud HTTP a la URL
+    response = requests.get(championsURL)
+
+    if response.status_code == 200:
+        # Expresión regular actualizada para encontrar el enlace
+        patron_enlace = r'(https://ddragon\.leagueoflegends\.com/cdn/\d+(\.\d+)+/data/en_US/champion\.json)'
+
+        # Buscar el enlace usando la expresión regular
+        enlace_encontrado = re.search(patron_enlace, response.text).group()
+
+        # Descarga el JSON en el caso de encontrar el enlace
+        if enlace_encontrado:
+            response2 = requests.get(enlace_encontrado)
+            if response2.status_code == 200:
+                # ELIMINAR EL PRINT Y Enviar el response2.json() al fichero database para que lo parsee e introduzca los campeones en su DB
+                print(response2.text)
+            else:
+                print(f'Error en la solicitud: {response.status_code}')
+        else:
+            print('No hay enlaces coincidentes')
+    else:
+        print(f'Error en la solicitud: {response.status_code}')
+
+

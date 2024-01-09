@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from app.api import loginAPI
+from app import api
 
 teamAnalyticAPIKey = 'RGAPI-5b5ad231-cb44-4bd0-9306-d58dc37ca228'
 # TODO Si migramos la base de datos de local a otro sitio, hay que cambiar el argumento de MongoClient(), ya que
@@ -11,5 +11,6 @@ dbMatches = db['Matches']
 dbSummoner = db['Summoners']
 
 if __name__ == '__main__':
-    summoner_name = input("Introduce tu nombre de usuario: ")
-    loginAPI(dbSummoner, teamAnalyticAPIKey, summoner_name)
+    api.updateChampionsDB()
+    #summoner_name = input("Introduce tu nombre de usuario: ")
+    #loginAPI(dbSummoner, teamAnalyticAPIKey, summoner_name)
