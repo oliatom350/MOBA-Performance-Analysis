@@ -28,18 +28,7 @@ def loginAPI(collection: Collection[Mapping[str, Any]], api_key, summoner_name):
             for champion_mastery in data2:
                 champion_mastery.pop("summonerId", None)
             data["championMasteries"] = data2
-            # Desde aquí hasta el siguiente else es el procedimiento que tiene que realizar el fichero database.py
-            result = collection.update_one(
-                {"id": idSummoner},
-                {"$setOnInsert": data},
-                upsert=True
-            )
-            if result.upserted_id:
-                print(f"Se ha insertado un nuevo jugador con ID: {result.upserted_id}")
-                print(f'ID del Invocador: {idSummoner}')
-                print(f'Nivel del Invocador: {data["summonerLevel"]}')
-            else:
-                print(f"El jugador con ID {idSummoner} ya existe en la base de datos.")
+            data
 
         else:
             print(f'Error en la solicitud: {response.status_code}')
