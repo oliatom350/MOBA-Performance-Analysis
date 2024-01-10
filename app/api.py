@@ -1,6 +1,6 @@
 import re
 import requests
-import database
+from app import database
 
 
 def loginAPI(api_key, summoner_name):
@@ -15,9 +15,8 @@ def loginAPI(api_key, summoner_name):
     # Verifica si la solicitud fue exitosa (código de respuesta 200)
     if response.status_code == 200:
         data = response.json()
-        idSummoner = data["id"]
-
-        champion_mastery_url = f'https://euw1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-summoner/{idSummoner}'
+        puuid = data["puuid"]
+        champion_mastery_url = f'https://euw1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}'
         # Realiza la solicitud a la API de Champion-MasteryV4 de Riot Games
         response2 = requests.get(champion_mastery_url, headers=headers)
 
@@ -30,7 +29,7 @@ def loginAPI(api_key, summoner_name):
             database.insertarJugador(summoner_name, data)
 
         else:
-            print(f'Error en la solicitud: {response.status_code}')
+            print(f'Error en la solicitud: {response2.status_code}')
 
     else:
         print(f'Error en la solicitud: {response.status_code}')
