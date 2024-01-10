@@ -26,7 +26,7 @@ def loginAPI(api_key, summoner_name):
             for champion_mastery in data2:
                 champion_mastery.pop("summonerId", None)
             data["championMasteries"] = data2
-            database.insertarJugador(summoner_name, data)
+            database.insertPlayerDB(summoner_name, data)
 
         else:
             print(f'Error en la solicitud: {response2.status_code}')
@@ -35,7 +35,7 @@ def loginAPI(api_key, summoner_name):
         print(f'Error en la solicitud: {response.status_code}')
 
 
-def updateChampionsDB():
+def updateChampions():
     # URL de la página web empleada por Riot Games para publicar el json con todos los campeones del juego
     championsURL = 'https://developer.riotgames.com/docs/lol#data-dragon_champions'
 
@@ -53,8 +53,8 @@ def updateChampionsDB():
         if enlace_encontrado:
             response2 = requests.get(enlace_encontrado)
             if response2.status_code == 200:
-                # ELIMINAR EL PRINT Y Enviar el response2.json() al fichero database para que lo parsee e introduzca los campeones en su DB
-                print(response2.text)
+                # Envía el response2.json() al fichero database para que lo parsee e introduzca los campeones en su DB
+                database.updateChampionsDB(response2.json())
             else:
                 print(f'Error en la solicitud: {response.status_code}')
         else:
