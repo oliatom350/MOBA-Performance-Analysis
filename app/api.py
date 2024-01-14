@@ -2,13 +2,15 @@ import re
 import requests
 from app import database
 
+teamAnalyticAPIKey = 'RGAPI-5b5ad231-cb44-4bd0-9306-d58dc37ca228'
 
-def loginAPI(api_key, summoner_name):
+
+def loginAPI(summoner_name):
     # Endpoint de la API para obtener información del invocador por nombre
     summoner_api_url = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name}'
 
     # Agrega la clave de la API a la solicitud
-    headers = {'X-Riot-Token': api_key}
+    headers = {'X-Riot-Token': teamAnalyticAPIKey}
 
     # Realiza la solicitud a la API de SummonerV4 de Riot Games
     response = requests.get(summoner_api_url, headers=headers)
@@ -61,5 +63,3 @@ def updateChampions():
             print('No hay enlaces coincidentes')
     else:
         print(f'Error en la solicitud: {response.status_code}')
-
-
