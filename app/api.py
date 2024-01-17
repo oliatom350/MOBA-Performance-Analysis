@@ -1,11 +1,20 @@
 import re
 import requests
 from app import database
+from enum import Enum
+from queue import Queue
+import time
 
 teamAnalyticAPIKey = 'RGAPI-5b5ad231-cb44-4bd0-9306-d58dc37ca228'
 
 
-def loginAPI(summoner_name):
+class QueueType(Enum):
+    Normal = 1
+    Ranked_Solo = 2
+    Ranked_Flex = 3
+
+
+def registerSummoner(summoner_name):
     # Endpoint de la API para obtener información del invocador por nombre
     summoner_api_url = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name}'
 
@@ -63,3 +72,57 @@ def updateChampions():
             print('No hay enlaces coincidentes')
     else:
         print(f'Error en la solicitud: {response.status_code}')
+
+
+def getIDMatches(puuid, queue, startTime, endTime, count):
+    # Se construye la url basándose en el tipo de cola indicada en el parámetro
+    if queue == QueueType.Normal:
+        queue_param = 'normal'
+    elif queue == QueueType.Ranked_Solo or QueueType.Ranked_Flex:
+        queue_param = 'ranked'
+    else:
+        raise ValueError("Tipo de cola no válido")
+
+    matchesAPIurl = f'https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?type={queue_param}&startTime={startTime}&endTime={endTime}&count={count}'
+    # Agrega la clave de la API a la solicitud
+    headers = {'X-Riot-Token': teamAnalyticAPIKey}
+
+    response = requests.get(matchesAPIurl, headers=headers)
+
+    if response.status_code == 200:
+        match_ids = response.json()
+        return match_ids
+    else:
+        print(f"Error: {response.status_code}")
+        exit(1)
+
+    # Ahora, puedes usar los IDs de las partidas para obtener detalles de cada partida y almacenarlos en la base de datos.
+
+
+def getMatches():
+    # TODO Se establece un puuid de un player inicial
+    puuid = 1
+    # Se crea una cola de jugadores a procesar
+    puuidQueue = Queue()
+    puuidQueue.put(puuid)
+
+    while puuidQueue.not_empty:
+        # Primero, obtenemos 100 IDs de las partidas en las que ha participado el jugador puuid_actual (ya que count
+        # puede ser 100 como máximo) utilizando la primera de las APIs. Hay que utilizar como startTime el atributo de
+        # la última partida guardada en el jugador, pero si no existe, entonces usar 0. Si el resultado es vacío, pasar
+        # al siguiente jugador directamente
+
+        # Segundo, de forma iterativa, comprobamos si la partida ya existe en la BBDD y eliminarla del buffer de
+        # resultados en ese caso
+
+        # Tercero, comprobamos la fecha de la primera partida (la última que ha jugado) y la almacenamos como
+        # información dentro del fichero del jugador
+
+        # Cuarto, comprobamos la fecha de la última partida y, tras procesar esas 100 partidas, volvemos al primer paso
+        # utilizando como endTime esta fecha
+
+        # En líneas generales, deberían procesarse todas las partidas disputadas por el jugador hasta el 16 de junio de
+        # 2021, fecha en la que se almacenan las primeras partidas localizables con parámetros temporales
+        break
+
+    print('Ya no hay más jugadores nuevos que procesar')
