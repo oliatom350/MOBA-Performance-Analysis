@@ -1,28 +1,33 @@
+import queue
 import re
 import requests
 from app import database
 from enum import Enum
 from queue import Queue
 import time
+import json
 
 teamAnalyticAPIKey = 'RGAPI-5b5ad231-cb44-4bd0-9306-d58dc37ca228'
 
 
 class QueueType(Enum):
     Normal = 1
-    Ranked_Solo = 2
-    Ranked_Flex = 3
+    Ranked = 2
 
 
-def registerSummoner(summoner_name):
-    # Endpoint de la API para obtener información del invocador por nombre
-    summoner_api_url = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name}'
-
+def registerSummoner(summoner):
     # Agrega la clave de la API a la solicitud
     headers = {'X-Riot-Token': teamAnalyticAPIKey}
 
-    # Realiza la solicitud a la API de SummonerV4 de Riot Games
-    response = requests.get(summoner_api_url, headers=headers)
+    # Endpoint de la API para obtener información del invocador por nombre (su longitud máxima es 16)
+    # y por puuid (si la longitud es de exactamente 78)
+    if len(summoner) == 78:
+        summonerPUUID_api_url = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{summoner}'
+        response = requests.get(summonerPUUID_api_url, headers=headers)
+    else:
+        summonerName_api_url = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner}'
+        response = requests.get(summonerName_api_url, headers=headers)
+
     # Verifica si la solicitud fue exitosa (código de respuesta 200)
     if response.status_code == 200:
         data = response.json()
@@ -37,7 +42,8 @@ def registerSummoner(summoner_name):
             for champion_mastery in data2:
                 champion_mastery.pop("summonerId", None)
             data["championMasteries"] = data2
-            database.insertPlayerDB(summoner_name, data)
+            data["lastGame"] = 0
+            database.insertPlayerDB(summoner, data)
 
         else:
             print(f'Error en la solicitud: {response2.status_code}')
@@ -78,7 +84,7 @@ def getIDMatches(puuid, queue, startTime, endTime, count):
     # Se construye la url basándose en el tipo de cola indicada en el parámetro
     if queue == QueueType.Normal:
         queue_param = 'normal'
-    elif queue == QueueType.Ranked_Solo or QueueType.Ranked_Flex:
+    elif queue == QueueType.Ranked:
         queue_param = 'ranked'
     else:
         raise ValueError("Tipo de cola no válido")
@@ -107,22 +113,58 @@ def getMatches():
     puuidQueue.put(puuid)
 
     while puuidQueue.not_empty:
-        # Primero, obtenemos 100 IDs de las partidas en las que ha participado el jugador puuid_actual (ya que count
+        # Primero, almacenamos el jugador en la base de datos si este no estaba ya
+        puuidActual = puuidQueue.get()
+        registerSummoner(str(puuidActual))
+        # Segundo, obtenemos 100 IDs de las partidas en las que ha participado el jugador puuid_actual (ya que count
         # puede ser 100 como máximo) utilizando la primera de las APIs. Hay que utilizar como startTime el atributo de
-        # la última partida guardada en el jugador, pero si no existe, entonces usar 0. Si el resultado es vacío, pasar
+        # la última partida guardada en el jugador (inicialmente 0). Si el resultado es vacío, pasar
         # al siguiente jugador directamente
-
-        # Segundo, de forma iterativa, comprobamos si la partida ya existe en la BBDD y eliminarla del buffer de
-        # resultados en ese caso
-
-        # Tercero, comprobamos la fecha de la primera partida (la última que ha jugado) y la almacenamos como
-        # información dentro del fichero del jugador
-
-        # Cuarto, comprobamos la fecha de la última partida y, tras procesar esas 100 partidas, volvemos al primer paso
-        # utilizando como endTime esta fecha
+        lastGameActual = database.getLastGame(puuidActual)
+        result = getIDMatches(puuidActual, QueueType.Normal, lastGameActual, round(time.time()), 100)
+        # Creamos una cola que se irá actualizando con los IDs de las partidas encontradas
+        matchQueue = createIDQueue(result)
+        if not result:
+            continue
+        else:
+            # Tercero, comprobamos la fecha de la primera partida (la última que ha jugado) y la almacenamos como
+            # información dentro del fichero del jugador
+            setSummonerLastGame(puuidActual, matchQueue.get())
+            while result:
+                # Cuarto, de forma iterativa, comprobamos si la partida ya existe en la BBDD y, solo si no es la última,
+                # eliminarla del buffer de resultados en ese caso
+                # TODO Función en database.py que compruebe si la partida existe en la base de datos y devuelva un booleano
+                pass
+                # TODO Una vez hecho el bucle de comprobación, hacer el bucle de procesamiento donde se llama a la
+                #  segunda API para almacenar la info de la partida
+                # Quinto, comprobamos la fecha de la última partida y, tras procesar esas 100 partidas, volvemos a buscar
+                # otros 100 IDs utilizando como endTime esta fecha
+                # TODO oldestGameDate = fecha de la partida más antigua del conjunto result
+                #  result = getIDMatches(puuidActual, QueueType.Normal, lastGameActual, oldestGameDate, 100)
+            continue
 
         # En líneas generales, deberían procesarse todas las partidas disputadas por el jugador hasta el 16 de junio de
         # 2021, fecha en la que se almacenan las primeras partidas localizables con parámetros temporales
-        break
 
     print('Ya no hay más jugadores nuevos que procesar')
+
+
+def createIDQueue(idsJSON):
+    matchQueue = queue.Queue()
+    for matchID in idsJSON:
+        matchQueue.put(matchID)
+    return matchQueue
+
+
+def setSummonerLastGame(puuid, matchID):
+    matchesInfoAPI = f'https://europe.api.riotgames.com/lol/match/v5/matches/{matchID}'
+    # Agrega la clave de la API a la solicitud
+    headers = {'X-Riot-Token': teamAnalyticAPIKey}
+    response = requests.get(matchesInfoAPI, headers=headers)
+    if response.status_code == 200:
+        data = response.json()
+        matchDate = data['info']['gameCreation']
+        database.setLastGame(puuid, matchDate)
+    else:
+        print(f"Error: {response.status_code}")
+        exit(1)

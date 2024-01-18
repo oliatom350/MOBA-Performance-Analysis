@@ -59,3 +59,17 @@ def clearCollection():
         result = dbSummoner.delete_many({})
         # Imprimir el resultado
         print(f"Se han eliminado {result.deleted_count} documentos de la colección Summoner.")
+
+
+def getLastGame(puuid):
+    summoner = dbSummoner.find_one({"puuid": puuid})
+    if summoner:
+        return summoner["lastGame"]
+    else:
+        print(f"No existe el jugador con PUUID {puuid} en la base de datos")
+
+
+def setLastGame(puuid, time):
+    dbSummoner.update_one(
+        {"puuid": puuid}, {"$set": {"lastGame": time}},
+    )
