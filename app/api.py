@@ -121,7 +121,8 @@ def getMatches():
         # la última partida guardada en el jugador (inicialmente 0). Si el resultado es vacío, pasar
         # al siguiente jugador directamente
         lastGameActual = database.getLastGame(puuidActual)
-        result = getIDMatches(puuidActual, QueueType.Normal, lastGameActual, round(time.time()), 100)
+        endTime = round(time.time())
+        result = getIDMatches(puuidActual, QueueType.Normal, lastGameActual, endTime, 100)
         # Creamos una cola que se irá actualizando con los IDs de las partidas encontradas
         matchQueue = createIDQueue(result)
         if not result:
@@ -133,14 +134,17 @@ def getMatches():
             while result:
                 # Cuarto, de forma iterativa, comprobamos si la partida ya existe en la BBDD y, solo si no es la última,
                 # eliminarla del buffer de resultados en ese caso
-                # TODO Función en database.py que compruebe si la partida existe en la base de datos y devuelva un booleano
-                pass
-                # TODO Una vez hecho el bucle de comprobación, hacer el bucle de procesamiento donde se llama a la
-                #  segunda API para almacenar la info de la partida
+                for matchID in matchQueue.get():
+                    if database.checkGameDB(matchID):
+                        continue
+                    else:
+                        matchInfo = getMatchInfo(matchID)
+                        database.storeGameDB(matchInfo)
+                    if matchQueue.qsize() == 0:
+                        endTime = matchInfo['info']['gameCreation']
                 # Quinto, comprobamos la fecha de la última partida y, tras procesar esas 100 partidas, volvemos a buscar
                 # otros 100 IDs utilizando como endTime esta fecha
-                # TODO oldestGameDate = fecha de la partida más antigua del conjunto result
-                #  result = getIDMatches(puuidActual, QueueType.Normal, lastGameActual, oldestGameDate, 100)
+                result = getIDMatches(puuidActual, QueueType.Normal, lastGameActual, endTime, 100)
             continue
 
         # En líneas generales, deberían procesarse todas las partidas disputadas por el jugador hasta el 16 de junio de
@@ -165,6 +169,18 @@ def setSummonerLastGame(puuid, matchID):
         data = response.json()
         matchDate = data['info']['gameCreation']
         database.setLastGame(puuid, matchDate)
+    else:
+        print(f"Error: {response.status_code}")
+        exit(1)
+
+
+def getMatchInfo(matchID):
+    matchesInfoAPI = f'https://europe.api.riotgames.com/lol/match/v5/matches/{matchID}'
+    # Agrega la clave de la API a la solicitud
+    headers = {'X-Riot-Token': teamAnalyticAPIKey}
+    response = requests.get(matchesInfoAPI, headers=headers)
+    if response.status_code == 200:
+        return response.json()
     else:
         print(f"Error: {response.status_code}")
         exit(1)

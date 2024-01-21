@@ -73,3 +73,26 @@ def setLastGame(puuid, time):
     dbSummoner.update_one(
         {"puuid": puuid}, {"$set": {"lastGame": time}},
     )
+
+
+def checkGameDB(matchID):
+    match = dbMatches.find_one({"metadata.matchId": matchID})
+    if match:
+        return True
+    else:
+        print(f"No se encontró ninguna partida con el matchId {matchID}")
+        return False
+
+
+def storeGameDB(matchInfo):
+    matchID = matchInfo["metadata"]["matchID"]
+    result = dbMatches.update_one(
+        {"metadata.matchId": matchID},
+        {"$set": matchInfo},
+        upsert=True
+    )
+    if result.upserted_id:
+        print(f"Se ha insertado una nueva partida con matchId: {matchID}")
+    else:
+        print(f"Ya existe una partida con matchId: {matchID}. No se ha realizado la inserción.")
+
