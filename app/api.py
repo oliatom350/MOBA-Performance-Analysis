@@ -44,12 +44,15 @@ def registerSummoner(summoner):
             data["championMasteries"] = data2
             data["lastGame"] = 0
             database.insertPlayerDB(summoner, data)
+            return puuid
 
         else:
             print(f'Error en la solicitud: {response2.status_code}')
+            return '0'
 
     else:
         print(f'Error en la solicitud: {response.status_code}')
+        return '0'
 
 
 def updateChampions():
@@ -105,14 +108,13 @@ def getIDMatches(puuid, queue, startTime, endTime, count):
     # Ahora, puedes usar los IDs de las partidas para obtener detalles de cada partida y almacenarlos en la base de datos.
 
 
-def getMatches():
-    # TODO Se establece un puuid de un player inicial
-    puuid = 1
+def getMatches(puuid):
     # Se crea una cola de jugadores a procesar
     puuidQueue = Queue()
     puuidQueue.put(puuid)
 
     while puuidQueue.not_empty:
+        # TODO Una vez la funcionalidad esté completa, añadir el result para QueueType.Ranked
         # Primero, almacenamos el jugador en la base de datos si este no estaba ya
         puuidActual = puuidQueue.get()
         registerSummoner(str(puuidActual))
@@ -140,6 +142,7 @@ def getMatches():
                     else:
                         matchInfo = getMatchInfo(matchID)
                         database.storeGameDB(matchInfo)
+                        # TODO Añadir los IDs de los jugadores nuevos a la puuidQueue
                     if matchQueue.qsize() == 0:
                         endTime = matchInfo['info']['gameCreation']
                 # Quinto, comprobamos la fecha de la última partida y, tras procesar esas 100 partidas, volvemos a buscar

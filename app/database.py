@@ -41,9 +41,9 @@ def updateChampionsDB(json):
             print(f"Se ha actualizado la información del campeón con ID: {champ_data['id']}")
 
 
-def clearCollection():
+def clearCollection(idCollection):
     # TODO Muy importante modificar el dato idCollection si se quieren eliminar los datos de una database concreta
-    idCollection = 0
+    # idCollection = 0
     if idCollection == 0:
         # Eliminar todos los documentos de la colección
         result = dbChampions.delete_many({})
@@ -59,7 +59,9 @@ def clearCollection():
         result = dbSummoner.delete_many({})
         # Imprimir el resultado
         print(f"Se han eliminado {result.deleted_count} documentos de la colección Summoner.")
-
+    else:
+        print(f"No se ha eliminado ninguna colección. Introduce un valor de colección correcto:"
+              f"Champions -- 0      Matches -- 1        Summoner -- 2")
 
 def getLastGame(puuid):
     summoner = dbSummoner.find_one({"puuid": puuid})
