@@ -14,6 +14,7 @@ class QueueType(Enum):
 
 
 def registerSummoner(summoner):
+    # TODO Buscar la forma de hacer las request mediante la función doRequest()
     # Agrega la clave de la API a la solicitud
     headers = {'X-Riot-Token': teamAnalyticAPIKey}
 
@@ -51,6 +52,7 @@ def registerSummoner(summoner):
 
 
 def updateChampions():
+    # TODO Buscar la forma de hacer las request mediante la función doRequest()
     # URL de la página web empleada por Riot Games para publicar el json con todos los campeones del juego
     championsURL = 'https://developer.riotgames.com/docs/lol#data-dragon_champions'
 
@@ -186,4 +188,3 @@ def doRequest(APIurl):
     else:
         print(f"Error: {response.status_code}")
         exit(1)
-        
