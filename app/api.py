@@ -1,11 +1,9 @@
-import queue
 import re
 import requests
 from app import database
 from enum import Enum
 from queue import Queue
 import time
-import json
 
 teamAnalyticAPIKey = 'RGAPI-5b5ad231-cb44-4bd0-9306-d58dc37ca228'
 
@@ -44,15 +42,12 @@ def registerSummoner(summoner):
             data["championMasteries"] = data2
             data["lastGame"] = 0
             database.insertPlayerDB(summoner, data)
-            return puuid
 
         else:
             print(f'Error en la solicitud: {response2.status_code}')
-            return '0'
 
     else:
         print(f'Error en la solicitud: {response.status_code}')
-        return '0'
 
 
 def updateChampions():
@@ -93,17 +88,7 @@ def getIDMatches(puuid, queue, startTime, endTime, count):
         raise ValueError("Tipo de cola no válido")
 
     matchesAPIurl = f'https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?type={queue_param}&startTime={startTime}&endTime={endTime}&count={count}'
-    # Agrega la clave de la API a la solicitud
-    headers = {'X-Riot-Token': teamAnalyticAPIKey}
-
-    response = requests.get(matchesAPIurl, headers=headers)
-
-    if response.status_code == 200:
-        match_ids = response.json()
-        return match_ids
-    else:
-        print(f"Error: {response.status_code}")
-        exit(1)
+    return doRequest(matchesAPIurl)
 
     # Ahora, puedes usar los IDs de las partidas para obtener detalles de cada partida y almacenarlos en la base de datos.
 
@@ -117,7 +102,8 @@ def getMatches(puuid):
         # TODO Una vez la funcionalidad esté completa, añadir el result para QueueType.Ranked
         # Primero, almacenamos el jugador en la base de datos si este no estaba ya
         puuidActual = puuidQueue.get()
-        registerSummoner(str(puuidActual))
+        nameActual = getSummonerName(puuidActual)
+        registerSummoner(nameActual)
         # Segundo, obtenemos 100 IDs de las partidas en las que ha participado el jugador puuid_actual (ya que count
         # puede ser 100 como máximo) utilizando la primera de las APIs. Hay que utilizar como startTime el atributo de
         # la última partida guardada en el jugador (inicialmente 0). Si el resultado es vacío, pasar
@@ -125,25 +111,24 @@ def getMatches(puuid):
         lastGameActual = database.getLastGame(puuidActual)
         endTime = round(time.time())
         result = getIDMatches(puuidActual, QueueType.Normal, lastGameActual, endTime, 100)
-        # Creamos una cola que se irá actualizando con los IDs de las partidas encontradas
-        matchQueue = createIDQueue(result)
         if not result:
             continue
         else:
             # Tercero, comprobamos la fecha de la primera partida (la última que ha jugado) y la almacenamos como
             # información dentro del fichero del jugador
-            setSummonerLastGame(puuidActual, matchQueue.get())
+            setSummonerLastGame(puuidActual, result[0])
             while result:
+                matchList = createIDList(result)
                 # Cuarto, de forma iterativa, comprobamos si la partida ya existe en la BBDD y, solo si no es la última,
                 # eliminarla del buffer de resultados en ese caso
-                for matchID in matchQueue.get():
+                for matchID in matchList:
                     if database.checkGameDB(matchID):
                         continue
                     else:
                         matchInfo = getMatchInfo(matchID)
                         database.storeGameDB(matchInfo)
                         # TODO Añadir los IDs de los jugadores nuevos a la puuidQueue
-                    if matchQueue.qsize() == 0:
+                    if len(matchList) == 1:
                         endTime = matchInfo['info']['gameCreation']
                 # Quinto, comprobamos la fecha de la última partida y, tras procesar esas 100 partidas, volvemos a buscar
                 # otros 100 IDs utilizando como endTime esta fecha
@@ -156,34 +141,49 @@ def getMatches(puuid):
     print('Ya no hay más jugadores nuevos que procesar')
 
 
-def createIDQueue(idsJSON):
-    matchQueue = queue.Queue()
+def createIDList(idsJSON):
+    matchList = []
     for matchID in idsJSON:
-        matchQueue.put(matchID)
-    return matchQueue
+        matchList.append(matchID)
+    return matchList
+
+
+def getSummonerName(puuidActual):
+    summonerPUUIDAPI = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuidActual}'
+    data = doRequest(summonerPUUIDAPI)
+    return data["name"]
+
+
+def getSummonerPUUID(summonerName):
+    summonerNameAPI = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summonerName}'
+    data = doRequest(summonerNameAPI)
+    return data["puuid"]
 
 
 def setSummonerLastGame(puuid, matchID):
     matchesInfoAPI = f'https://europe.api.riotgames.com/lol/match/v5/matches/{matchID}'
-    # Agrega la clave de la API a la solicitud
-    headers = {'X-Riot-Token': teamAnalyticAPIKey}
-    response = requests.get(matchesInfoAPI, headers=headers)
-    if response.status_code == 200:
-        data = response.json()
-        matchDate = data['info']['gameCreation']
-        database.setLastGame(puuid, matchDate)
-    else:
-        print(f"Error: {response.status_code}")
-        exit(1)
+    data = doRequest(matchesInfoAPI)
+    matchDate = data['info']['gameCreation']
+    database.setLastGame(puuid, matchDate)
 
 
 def getMatchInfo(matchID):
     matchesInfoAPI = f'https://europe.api.riotgames.com/lol/match/v5/matches/{matchID}'
-    # Agrega la clave de la API a la solicitud
+    return doRequest(matchesInfoAPI)
+
+
+def doRequest(APIurl):
     headers = {'X-Riot-Token': teamAnalyticAPIKey}
-    response = requests.get(matchesInfoAPI, headers=headers)
+    response = requests.get(APIurl, headers=headers)
     if response.status_code == 200:
+        return response.json()
+    elif response.status_code == 429:
+        # TODO Recuperar valor de los segundos de la cabecera de response 'retry-after'[1] y esperar esos segundos
+        waitTime = response.headers["retry-after"]
+        time.sleep(int(waitTime)+1)
+        response = requests.get(APIurl, headers=headers)
         return response.json()
     else:
         print(f"Error: {response.status_code}")
         exit(1)
+        

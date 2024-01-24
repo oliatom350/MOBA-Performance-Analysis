@@ -7,5 +7,5 @@ if __name__ == '__main__':
     database.clearCollection(2)
     api.updateChampions()
     summoner_name = input("Introduce tu nombre de usuario: ")
-    puuidInicial = api.registerSummoner(summoner_name)
+    puuidInicial = api.getSummonerPUUID(summoner_name)
     api.getMatches(puuidInicial)

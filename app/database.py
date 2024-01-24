@@ -63,6 +63,7 @@ def clearCollection(idCollection):
         print(f"No se ha eliminado ninguna colección. Introduce un valor de colección correcto:"
               f"Champions -- 0      Matches -- 1        Summoner -- 2")
 
+
 def getLastGame(puuid):
     summoner = dbSummoner.find_one({"puuid": puuid})
     if summoner:
@@ -82,12 +83,11 @@ def checkGameDB(matchID):
     if match:
         return True
     else:
-        print(f"No se encontró ninguna partida con el matchId {matchID}")
         return False
 
 
 def storeGameDB(matchInfo):
-    matchID = matchInfo["metadata"]["matchID"]
+    matchID = matchInfo["metadata"]["matchId"]
     result = dbMatches.update_one(
         {"metadata.matchId": matchID},
         {"$set": matchInfo},
@@ -97,4 +97,3 @@ def storeGameDB(matchInfo):
         print(f"Se ha insertado una nueva partida con matchId: {matchID}")
     else:
         print(f"Ya existe una partida con matchId: {matchID}. No se ha realizado la inserción.")
-
