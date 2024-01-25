@@ -19,8 +19,10 @@ def insertPlayerDB(idSummoner, data):
         print(f"Se ha insertado un nuevo jugador con ID: {result.upserted_id}")
         print(f'ID del Invocador: {idSummoner}')
         print(f'Nivel del Invocador: {data["summonerLevel"]}')
+        return True
     else:
         print(f"El jugador con ID {idSummoner} ya existe en la base de datos.")
+        return False
 
 
 def updateChampionsDB(json):

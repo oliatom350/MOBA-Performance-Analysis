@@ -42,13 +42,15 @@ def registerSummoner(summoner):
                 champion_mastery.pop("summonerId", None)
             data["championMasteries"] = data2
             data["lastGame"] = 0
-            database.insertPlayerDB(summoner, data)
+            return database.insertPlayerDB(summoner, data)
 
         else:
             print(f'Error en la solicitud: {response2.status_code}')
+            exit(1)
 
     else:
         print(f'Error en la solicitud: {response.status_code}')
+        exit(1)
 
 
 def updateChampions():
@@ -99,48 +101,78 @@ def getMatches(puuid):
     # Se crea una cola de jugadores a procesar
     puuidQueue = Queue()
     puuidQueue.put(puuid)
-
     while puuidQueue.not_empty:
-        # TODO Una vez la funcionalidad esté completa, añadir el result para QueueType.Ranked
-        # Primero, almacenamos el jugador en la base de datos si este no estaba ya
         puuidActual = puuidQueue.get()
         nameActual = getSummonerName(puuidActual)
-        registerSummoner(nameActual)
-        # Segundo, obtenemos 100 IDs de las partidas en las que ha participado el jugador puuid_actual (ya que count
-        # puede ser 100 como máximo) utilizando la primera de las APIs. Hay que utilizar como startTime el atributo de
-        # la última partida guardada en el jugador (inicialmente 0). Si el resultado es vacío, pasar
-        # al siguiente jugador directamente
-        lastGameActual = database.getLastGame(puuidActual)
-        endTime = round(time.time())
-        result = getIDMatches(puuidActual, QueueType.Normal, lastGameActual, endTime, 100)
-        if not result:
-            continue
+        newSummoner = registerSummoner(nameActual)
+        if newSummoner:
+            getAllMatches(puuid)
         else:
-            # Tercero, comprobamos la fecha de la primera partida (la última que ha jugado) y la almacenamos como
-            # información dentro del fichero del jugador
-            setSummonerLastGame(puuidActual, result[0])
-            while result:
-                matchList = createIDList(result)
-                # Cuarto, de forma iterativa, comprobamos si la partida ya existe en la BBDD y, solo si no es la última,
-                # eliminarla del buffer de resultados en ese caso
-                for matchID in matchList:
-                    if database.checkGameDB(matchID):
-                        continue
-                    else:
-                        matchInfo = getMatchInfo(matchID)
-                        database.storeGameDB(matchInfo)
-                        # TODO Añadir los IDs de los jugadores nuevos a la puuidQueue
-                    if len(matchList) == 1:
-                        endTime = matchInfo['info']['gameCreation']
-                # Quinto, comprobamos la fecha de la última partida y, tras procesar esas 100 partidas, volvemos a buscar
-                # otros 100 IDs utilizando como endTime esta fecha
-                result = getIDMatches(puuidActual, QueueType.Normal, lastGameActual, endTime, 100)
-            continue
-
-        # En líneas generales, deberían procesarse todas las partidas disputadas por el jugador hasta el 16 de junio de
-        # 2021, fecha en la que se almacenan las primeras partidas localizables con parámetros temporales
+            getNewMatches(puuid)
 
     print('Ya no hay más jugadores nuevos que procesar')
+
+
+def getAllMatches(puuid):
+    # TODO Una vez la funcionalidad esté completa, añadir el result para QueueType.Ranked
+    # Primero, obtenemos 100 IDs de las partidas en las que ha participado el jugador puuid_actual (ya que count
+    # puede ser 100 como máximo) utilizando la primera de las APIs. Hay que utilizar como startTime el atributo de
+    # la última partida guardada en el jugador (inicialmente 0). Si el resultado es vacío, pasar
+    # al siguiente jugador directamente
+    newPlayers = list()
+    limitAPIDate = 1623801600
+    endTime = round(time.time())
+    result = getIDMatches(puuid, QueueType.Normal, limitAPIDate, endTime, 100)
+    if not result:
+        pass
+    else:
+        # Segundo, comprobamos la fecha de la primera partida (la última que ha jugado) y la almacenamos como
+        # información dentro del fichero del jugador
+        setSummonerLastGame(puuid, result[0])
+        while result:
+            matchList = createIDList(result)
+            # Tercero, de forma iterativa, comprobamos si la partida ya existe en la BBDD y, solo si no es la última,
+            # ignorarla
+            for matchID in matchList:
+                if database.checkGameDB(matchID):
+                    continue
+                else:
+                    matchInfo = getMatchInfo(matchID)
+                    database.storeGameDB(matchInfo)
+                    # TODO Añadir los IDs de los jugadores nuevos a la puuidQueue
+                if len(matchList) == 1:
+                    endTime = matchInfo['info']['gameCreation'][:-3]
+            # Cuarto, tras comprobar la fecha de la última partida y habiendo procesado esas 100 partidas, volvemos a buscar
+            # otros 100 IDs utilizando como endTime esta fecha
+            result = getIDMatches(puuid, QueueType.Normal, limitAPIDate, endTime, 100)
+    return newPlayers
+    # En líneas generales, deberían procesarse todas las partidas disputadas por el jugador hasta el 16 de junio de
+    # 2021, fecha en la que se almacenan las primeras partidas localizables con parámetros temporales.
+    # Se devuelve una lista con todos los nuevos jugadores detectados para ser procesados
+
+
+def getNewMatches(puuid):
+    newPlayers = list()
+    limitAPIDate = database.getLastGame(puuid)
+    endTime = round(time.time())
+    result = getIDMatches(puuid, QueueType.Normal, limitAPIDate, endTime, 100)
+    if not result:
+        pass
+    else:
+        setSummonerLastGame(puuid, result[0])
+        while result:
+            matchList = createIDList(result)
+            for matchID in matchList:
+                if database.checkGameDB(matchID):
+                    continue
+                else:
+                    matchInfo = getMatchInfo(matchID)
+                    database.storeGameDB(matchInfo)
+                    # TODO Añadir los IDs de los jugadores nuevos a la puuidQueue
+                if len(matchList) == 1:
+                    endTime = matchInfo['info']['gameCreation'][:-3]
+            result = getIDMatches(puuid, QueueType.Normal, limitAPIDate, endTime, 100)
+    return newPlayers
 
 
 def createIDList(idsJSON):
@@ -174,15 +206,22 @@ def getMatchInfo(matchID):
     return doRequest(matchesInfoAPI)
 
 
+def getNewPlayers(matchInfo):
+    # TODO Debe comprobar cuáles de todos los jugadores de la partida no están en la base de datos y devolverlos
+    pass
+
+
 def doRequest(APIurl):
     headers = {'X-Riot-Token': teamAnalyticAPIKey}
     response = requests.get(APIurl, headers=headers)
     if response.status_code == 200:
         return response.json()
     elif response.status_code == 429:
-        # TODO Recuperar valor de los segundos de la cabecera de response 'retry-after'[1] y esperar esos segundos
-        waitTime = response.headers["retry-after"]
-        time.sleep(int(waitTime)+1)
+        waitTime = int(response.headers["retry-after"])
+        print(f"Esperando {waitTime} segundos para continuar con la petición de partidas...")
+        time.sleep(waitTime/2 + 1)
+        print(f"Esperando {int(waitTime - waitTime/2 + 1)} segundos para continuar con la petición de partidas...")
+        time.sleep(waitTime - waitTime/2 + 1)
         response = requests.get(APIurl, headers=headers)
         return response.json()
     else:
