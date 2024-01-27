@@ -12,8 +12,7 @@ dbSummoner = db['Summoners']
 def insertPlayerDB(idSummoner, data):
     result = dbSummoner.update_one(
         {"id": idSummoner},
-        {"$setOnInsert": data},
-        upsert=True
+        {"$setOnInsert": data}
     )
     if result.upserted_id:
         print(f"Se ha insertado un nuevo jugador con ID: {result.upserted_id}")
@@ -21,7 +20,7 @@ def insertPlayerDB(idSummoner, data):
         print(f'Nivel del Invocador: {data["summonerLevel"]}')
         return True
     else:
-        print(f"El jugador con ID {idSummoner} ya existe en la base de datos.")
+        print(f"El jugador con ID {idSummoner} ya existe en la base de datos y se ha actualizado su información.")
         return False
 
 
@@ -64,6 +63,14 @@ def clearCollection(idCollection):
     else:
         print(f"No se ha eliminado ninguna colección. Introduce un valor de colección correcto:"
               f"Champions -- 0      Matches -- 1        Summoner -- 2")
+
+
+def checkPlayerDB(puuid):
+    summoner = dbSummoner.find_one({"puuid": puuid})
+    if summoner:
+        return True
+    else:
+        return False
 
 
 def getLastGame(puuid):
