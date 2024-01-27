@@ -42,7 +42,7 @@ def registerSummoner(summoner):
                 champion_mastery.pop("summonerId", None)
             data["championMasteries"] = data2
             data["lastGame"] = 0
-            return database.insertPlayerDB(summoner, data)
+            return database.insertPlayerDB(summoner, puuid, data)
 
         else:
             print(f'Error en la solicitud: {response2.status_code}')
@@ -154,6 +154,7 @@ def getPlayerMatches(puuid, existing: bool):
                     endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
             # Cuarto, tras comprobar la fecha de la última partida y habiendo procesado esas 100 partidas, volvemos a buscar
             # otros 100 IDs utilizando como endTime esta fecha
+            # TODO Se queda en un bucle infinito cuando el jugador ya existe en la BBDD
             result = getIDMatches(puuid, QueueType.Normal, limitAPIDate, endTime, 100)
             # Al haber comprobado que a veces la API devuelve IDs consecutivos de partidas no almacenadas, usamos un
             # flag para abandonar la búsqueda si esto ocurre

@@ -9,18 +9,20 @@ dbMatches = db['Matches']
 dbSummoner = db['Summoners']
 
 
-def insertPlayerDB(idSummoner, data):
-    result = dbSummoner.update_one(
-        {"id": idSummoner},
-        {"$setOnInsert": data}
-    )
-    if result.upserted_id:
-        print(f"Se ha insertado un nuevo jugador con ID: {result.upserted_id}")
-        print(f'ID del Invocador: {idSummoner}')
+def insertPlayerDB(name, puuid, data):
+    existing_player = dbSummoner.find_one({"puuid": puuid})
+
+    if existing_player is None:
+        # No existe, realizamos la inserción
+        result = dbSummoner.insert_one(data)
+        print(f"Se ha insertado un nuevo jugador con ID: {result.inserted_id}")
+        print(f'PUUID del Invocador: {puuid}')
         print(f'Nivel del Invocador: {data["summonerLevel"]}')
         return True
     else:
-        print(f"El jugador con ID {idSummoner} ya existe en la base de datos y se ha actualizado su información.")
+        # Ya existe, actualizamos la información
+        dbSummoner.update_one({"puuid": puuid}, {"$set": data})
+        print(f"El jugador con nombre {name} ya existe en la base de datos y se ha actualizado su información.")
         return False
 
 
@@ -28,16 +30,16 @@ def updateChampionsDB(json):
     for champ_name, champ_data in json['data'].items():
         champ = {champ_name: champ_data}
 
-        # Realiza la actualización de los datos del campeón
-        result = dbChampions.update_one(
-            {"id": champ_data['id']},
-            {"$set": champ}
-        )
-        # Sólo si el campeón no existía, entonces se inserta como nuevo
-        if result.upserted_id:
-            print(f"Se ha insertado un nuevo campeón con ID: {result.upserted_id}")
+        existing_champion = dbChampions.find_one({f"{champ_name}.id": champ_data['id']})
+
+        if existing_champion is None:
+            # No existe, realizamos la inserción
+            result = dbChampions.insert_one(champ)
+            print(f"Se ha insertado un nuevo campeón con ID: {result.inserted_id}")
             print(f'ID del Campeón: {champ_data["id"]}')
         else:
+            # Ya existe, actualizamos la información
+            dbChampions.update_one({"id": champ_data['id']}, {"$set": champ})
             print(f"Se ha actualizado la información del campeón con ID: {champ_data['id']}")
 
 
@@ -64,14 +66,6 @@ def clearCollection(idCollection):
               f"Champions -- 0      Matches -- 1        Summoner -- 2")
 
 
-def checkPlayerDB(puuid):
-    summoner = dbSummoner.find_one({"puuid": puuid})
-    if summoner:
-        return True
-    else:
-        return False
-
-
 def getLastGame(puuid):
     summoner = dbSummoner.find_one({"puuid": puuid})
     if summoner:
@@ -96,11 +90,13 @@ def checkGameDB(matchID):
 
 def storeGameDB(matchInfo):
     matchID = matchInfo["metadata"]["matchId"]
-    result = dbMatches.update_one(
-        {"metadata.matchId": matchID},
-        {"$set": matchInfo}
-    )
-    if result.upserted_id:
+    existing_match = dbMatches.find_one({"metadata.matchId": matchID})
+
+    if existing_match is None:
+        # No existe, realizamos la inserción
+        dbMatches.insert_one(matchInfo)
         print(f"Se ha insertado una nueva partida con matchId: {matchID}")
     else:
-        print(f"Ya existe una partida con matchId: {matchID}. No se ha realizado la inserción.")
+        # Ya existe, esta vez NO actualizamos la información
+        print(f"Ya existe una partida con matchId: {matchID}.")
+
