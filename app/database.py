@@ -31,8 +31,7 @@ def updateChampionsDB(json):
         # Realiza la actualización de los datos del campeón
         result = dbChampions.update_one(
             {"id": champ_data['id']},
-            {"$set": champ},
-            upsert=True
+            {"$set": champ}
         )
         # Sólo si el campeón no existía, entonces se inserta como nuevo
         if result.upserted_id:
@@ -99,8 +98,7 @@ def storeGameDB(matchInfo):
     matchID = matchInfo["metadata"]["matchId"]
     result = dbMatches.update_one(
         {"metadata.matchId": matchID},
-        {"$set": matchInfo},
-        upsert=True
+        {"$set": matchInfo}
     )
     if result.upserted_id:
         print(f"Se ha insertado una nueva partida con matchId: {matchID}")
