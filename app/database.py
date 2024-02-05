@@ -96,7 +96,16 @@ def storeGameDB(matchInfo):
         # No existe, realizamos la inserción
         dbMatches.insert_one(matchInfo)
         print(f"Se ha insertado una nueva partida con matchId: {matchID}")
+        return matchInfo["metadata"]["participants"]
     else:
         # Ya existe, esta vez NO actualizamos la información
         print(f"Ya existe una partida con matchId: {matchID}.")
+        return []
 
+
+def checkPlayerDB(player):
+    existing_player = dbSummoner.find_one({"puuid": player})
+    if existing_player:
+        # Devuelve False si no existe el jugador en la BBDD, True en caso contrario
+        return False
+    return True
