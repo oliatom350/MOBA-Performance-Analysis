@@ -102,7 +102,10 @@ def getMatches(puuid):
 
 
 def getPlayerMatches(puuid, existing: bool):
-    # TODO Una vez la funcionalidad esté completa, añadir el result para QueueType.Ranked
+    # TODO PROBLEMA: Las partidas de Ranked nunca son añadidas puesto que al encontrarse algún ID que no tiene info se
+    #  sale del bucle sin procesar las siguientes.
+    #  POSIBLE SOLUCIÓN: Eliminar la salida del bucle, ir asignando cada partida correctamente encontrada a 'endTime' y
+    #  hacer un continue en vez de un break en el for
     # Primero, obtenemos 100 IDs de las partidas en las que ha participado el jugador puuid_actual (ya que count
     # puede ser 100 como máximo) utilizando la primera de las APIs. Si el resultado es vacío, pasar
     # al siguiente jugador directamente.
@@ -116,6 +119,8 @@ def getPlayerMatches(puuid, existing: bool):
         limitAPIDate = 1623801600
     endTime = round(time.time())
     result = getIDMatches(puuid, QueueType.Normal, limitAPIDate, endTime, 100)
+    resultRanked = getIDMatches(puuid, QueueType.Ranked, limitAPIDate, endTime, 100)
+    result = result+resultRanked
     if not result:
         pass
     else:
@@ -233,7 +238,7 @@ def retryRequest(APIurl, headers):
         time.sleep(x)
         response = requests.get(APIurl, headers=headers)
         if response.status_code == 500 or response.status_code == 503:
-            x = 2 ^ x
+            x = float(2 ^ int(x))
         else:
             break
     return response.json()

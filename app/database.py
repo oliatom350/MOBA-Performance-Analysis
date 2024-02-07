@@ -88,6 +88,14 @@ def checkGameDB(matchID):
         return False
 
 
+def checkGameAppDB(matchID):
+    match = dbMatches.count_documents({"metadata.matchId": matchID})
+    if match:
+        print(match)
+    else:
+        print(0)
+
+
 def storeGameDB(matchInfo):
     matchID = matchInfo["metadata"]["matchId"]
     existing_match = dbMatches.find_one({"metadata.matchId": matchID})
