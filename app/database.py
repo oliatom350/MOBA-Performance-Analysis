@@ -16,6 +16,7 @@ def insertPlayerDB(name, puuid, data):
         # No existe, realizamos la inserción
         result = dbSummoner.insert_one(data)
         print(f"Se ha insertado un nuevo jugador con ID: {result.inserted_id}")
+        print(f"Nombre del Invocador: {name}")
         print(f'PUUID del Invocador: {puuid}')
         print(f'Nivel del Invocador: {data["summonerLevel"]}')
         return True

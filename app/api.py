@@ -102,10 +102,6 @@ def getMatches(puuid):
 
 
 def getPlayerMatches(puuid, existing: bool):
-    # TODO PROBLEMA: Las partidas de Ranked nunca son añadidas puesto que al encontrarse algún ID que no tiene info se
-    #  sale del bucle sin procesar las siguientes.
-    #  POSIBLE SOLUCIÓN: Eliminar la salida del bucle, ir asignando cada partida correctamente encontrada a 'endTime' y
-    #  hacer un continue en vez de un break en el for
     # Primero, obtenemos 100 IDs de las partidas en las que ha participado el jugador puuid_actual (ya que count
     # puede ser 100 como máximo) utilizando la primera de las APIs. Si el resultado es vacío, pasar
     # al siguiente jugador directamente.
