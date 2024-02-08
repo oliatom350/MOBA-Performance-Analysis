@@ -118,9 +118,7 @@ def getPlayerMatches(puuid, existing: bool):
     else:
         limitAPIDate = 1623801600
     endTime = round(time.time())
-    result = getIDMatches(puuid, QueueType.Normal, limitAPIDate, endTime, 100)
-    resultRanked = getIDMatches(puuid, QueueType.Ranked, limitAPIDate, endTime, 100)
-    result = result+resultRanked
+    result = getNormalAndRankedIDs(puuid, limitAPIDate, endTime)
     if not result:
         pass
     else:
@@ -128,32 +126,30 @@ def getPlayerMatches(puuid, existing: bool):
         # información dentro del fichero del jugador
         setSummonerLastGame(puuid, result[0])
         while result:
-            matchList = createIDList(result)
-            exitGameSearch = False
             # Tercero, de forma iterativa, comprobamos si la partida ya existe en la BBDD y, solo si no es la última,
             # simplemente guardarla en la BBDD. En el caso de ser la última, recupera también su fecha de creación para
             # realizar la siguiente búsqueda
-            for matchID in matchList:
+            for matchID in result:
                 if database.checkGameDB(matchID):
                     continue
                 else:
                     matchInfo = getMatchInfo(matchID)
+                    # Al haber comprobado que a veces la API devuelve IDs consecutivos de partidas no almacenadas, se
+                    # continúa el procesamiento ignorando los IDs sin información
                     if matchInfo is None:
-                        exitGameSearch = True
-                        break
-                    partipants = database.storeGameDB(matchInfo)
-                    for player in partipants:
+                        continue
+                    participants = database.storeGameDB(matchInfo)
+                    for player in participants:
                         if database.checkPlayerDB(player):
                             newPlayers.append(player)
-                if matchID == matchList[-1]:
-                    endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
+                endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
             # Cuarto, tras comprobar la fecha de la última partida y habiendo procesado esas 100 partidas, volvemos a buscar
             # otros 100 IDs utilizando como endTime esta fecha
-            result2 = getIDMatches(puuid, QueueType.Normal, limitAPIDate, endTime, 100)
-            # Al haber comprobado que a veces la API devuelve IDs consecutivos de partidas no almacenadas, usamos un
-            # flag para abandonar la búsqueda si esto ocurre. Además, para evitar loops infinitos, se comprueba que el
-            # resultado de la búsqueda no sea exactamente el mismo que en la anterior iteración
-            if exitGameSearch or result == result2:
+            result2 = getNormalAndRankedIDs(puuid, limitAPIDate, endTime)
+            # Para salir del bucle, se comprueba si la longitud del nuevo resultado de búsquedas es 0, es decir, no hay
+            # más partidas que procesar. Además, para evitar loops infinitos, se comprueba que el resultado de la
+            # búsqueda no sea exactamente el mismo que en la anterior iteración
+            if len(result2) == 0 or result == result2:
                 break
             else:
                 result = result2
@@ -163,11 +159,11 @@ def getPlayerMatches(puuid, existing: bool):
     # Se devuelve una lista con todos los nuevos jugadores detectados para ser procesados
 
 
-def createIDList(idsJSON):
-    matchList = []
-    for matchID in idsJSON:
-        matchList.append(matchID)
-    return matchList
+def getNormalAndRankedIDs(puuid, limitDate, endTime):
+    result = getIDMatches(puuid, QueueType.Normal, limitDate, endTime, 100)
+    resultRanked = getIDMatches(puuid, QueueType.Ranked, limitDate, endTime, 100)
+    result = result + resultRanked
+    return result
 
 
 def getSummonerName(puuidActual):
