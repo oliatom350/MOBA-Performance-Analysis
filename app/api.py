@@ -210,7 +210,7 @@ def doRequest(APIurl):
         time.sleep(int(waitTime - waitTime / 2 + 1))
         response = doRequest(APIurl)
         return response
-    elif response.status_code == 404:
+    elif response.status_code == 403 or response.status_code == 404:
         if APIurl.startswith('https://europe.api.riotgames.com/lol/match/v5/matches/'):
             return None
         else:

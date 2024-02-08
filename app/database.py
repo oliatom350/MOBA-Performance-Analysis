@@ -123,7 +123,7 @@ def storeEmptyGameIDDB(matchID):
     existing_match = dbBlacklistMatch.find_one({"matchId": matchID})
     if existing_match is None:
         # No existe, realizamos la inserción
-        dbBlacklistMatch.insert_one(matchID)
+        dbBlacklistMatch.insert_one({"matchId": matchID})
 
 
 def checkGameBlacklist(matchID):
