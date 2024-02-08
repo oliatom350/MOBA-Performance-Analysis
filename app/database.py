@@ -7,6 +7,7 @@ db = cliente['TFG']
 dbChampions = db['Champions']
 dbMatches = db['Matches']
 dbSummoner = db['Summoners']
+dbBlacklistMatch = db['MatchBlacklist']
 
 
 def insertPlayerDB(name, puuid, data):
@@ -46,7 +47,6 @@ def updateChampionsDB(json):
 
 def clearCollection(idCollection):
     # TODO Muy importante modificar el dato idCollection si se quieren eliminar los datos de una database concreta
-    # idCollection = 0
     if idCollection == 0:
         # Eliminar todos los documentos de la colección
         result = dbChampions.delete_many({})
@@ -62,9 +62,14 @@ def clearCollection(idCollection):
         result = dbSummoner.delete_many({})
         # Imprimir el resultado
         print(f"Se han eliminado {result.deleted_count} documentos de la colección Summoner.")
+    elif idCollection == 3:
+        # Eliminar todos los documentos de la colección
+        result = dbBlacklistMatch.delete_many({})
+        # Imprimir el resultado
+        print(f"Se han eliminado {result.deleted_count} documentos de la colección MatchBlacklist.")
     else:
         print(f"No se ha eliminado ninguna colección. Introduce un valor de colección correcto:"
-              f"Champions -- 0      Matches -- 1        Summoner -- 2")
+              f"Champions -- 0      Matches -- 1        Summoner -- 2       MatchBlacklist -- 3")
 
 
 def getLastGame(puuid):
@@ -98,6 +103,8 @@ def checkGameAppDB(matchID):
 
 
 def storeGameDB(matchInfo):
+    if matchInfo is None:
+        return []
     matchID = matchInfo["metadata"]["matchId"]
     existing_match = dbMatches.find_one({"metadata.matchId": matchID})
 
@@ -110,6 +117,20 @@ def storeGameDB(matchInfo):
         # Ya existe, esta vez NO actualizamos la información
         print(f"Ya existe una partida con matchId: {matchID}.")
         return []
+
+
+def storeEmptyGameIDDB(matchID):
+    existing_match = dbBlacklistMatch.find_one({"matchId": matchID})
+    if existing_match is None:
+        # No existe, realizamos la inserción
+        dbBlacklistMatch.insert_one(matchID)
+
+
+def checkGameBlacklist(matchID):
+    existing_match = dbBlacklistMatch.find_one({"matchId": matchID})
+    if existing_match is None:
+        return False
+    return True
 
 
 def checkPlayerDB(player):

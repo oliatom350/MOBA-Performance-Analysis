@@ -126,7 +126,7 @@ def getPlayerMatches(puuid, existing: bool):
             # simplemente guardarla en la BBDD. En el caso de ser la última, recupera también su fecha de creación para
             # realizar la siguiente búsqueda
             for matchID in result:
-                if database.checkGameDB(matchID):
+                if database.checkGameDB(matchID) or database.checkGameBlacklist(matchID):
                     continue
                 else:
                     matchInfo = getMatchInfo(matchID)
@@ -186,6 +186,7 @@ def getMatchInfo(matchID):
     matchInfo = doRequest(matchesInfoAPI)
     if matchInfo is None:
         print(f'No se ha recuperado la partida con id {matchID}')
+        database.storeEmptyGameIDDB(matchID)
     return matchInfo
 
 
@@ -207,8 +208,8 @@ def doRequest(APIurl):
         time.sleep(int(waitTime / 2))
         print(f"Esperando {int(waitTime - waitTime / 2 + 1)} segundos para continuar con la petición de partidas...")
         time.sleep(int(waitTime - waitTime / 2 + 1))
-        response = requests.get(APIurl, headers=headers)
-        return response.json()
+        response = doRequest(APIurl)
+        return response
     elif response.status_code == 404:
         if APIurl.startswith('https://europe.api.riotgames.com/lol/match/v5/matches/'):
             return None
