@@ -61,10 +61,12 @@ def updateChampions():
                 database.updateChampionsDB(response2.json())
             else:
                 print(f'Error en la solicitud: {response.status_code}')
+                print(f"Time1: {time.strftime('%H:%M:%S', time.localtime())}")
         else:
             print('No hay enlaces coincidentes')
     else:
         print(f'Error en la solicitud: {response.status_code}')
+        print(f"Time2: {time.strftime('%H:%M:%S', time.localtime())}")
 
 
 def getIDMatches(puuid, queue, startTime, endTime, count):
@@ -138,6 +140,7 @@ def getPlayerMatches(puuid, existing: bool):
                     for player in participants:
                         if database.checkPlayerDB(player):
                             newPlayers.append(player)
+                # TODO: Hacer un try-catch y no almacenar endTime nuevo en caso de que sea vacío
                 endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
             # Cuarto, tras comprobar la fecha de la última partida y habiendo procesado esas 100 partidas, volvemos a buscar
             # otros 100 IDs utilizando como endTime esta fecha
@@ -215,11 +218,13 @@ def doRequest(APIurl):
             return None
         else:
             print(f"Error: {response.status_code}")
+            print(f"Time3: {time.strftime('%H:%M:%S', time.localtime())}")
             exit(1)
     elif response.status_code == 500 or response.status_code == 503:
         return retryRequest(APIurl, headers)
     else:
         print(f"Error: {response.status_code}")
+        print(f"Time4: {time.strftime('%H:%M:%S', time.localtime())}")
         exit(1)
 
 
