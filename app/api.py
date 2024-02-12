@@ -14,9 +14,6 @@ class QueueType(Enum):
 
 
 def registerSummoner(summoner):
-    # Agrega la clave de la API a la solicitud
-    headers = {'X-Riot-Token': teamAnalyticAPIKey}
-
     # Endpoint de la API para obtener información del invocador por nombre (su longitud máxima es 16)
     # y por puuid (si la longitud es de exactamente 78)
     if len(summoner) == 78:
@@ -26,11 +23,15 @@ def registerSummoner(summoner):
         summonerName_api_url = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner}'
         response = doRequest(summonerName_api_url)
 
+    if response is None:
+        return None
     puuid = response["puuid"]
     champion_mastery_url = f'https://euw1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}'
 
     # Realiza la solicitud a la API de Champion-MasteryV4 de Riot Games
     response2 = doRequest(champion_mastery_url)
+    if response2 is None:
+        return None
     # Eliminamos el campo redundante summonerId
     for champion_mastery in response2:
         champion_mastery.pop("summonerId", None)
@@ -92,6 +93,8 @@ def getMatches(puuid):
         puuidActual = puuidQueue.get()
         nameActual = getSummonerName(puuidActual)
         newSummoner = registerSummoner(nameActual)
+        if newSummoner is None:
+            continue
         newPlayers = []
         if newSummoner:
             newPlayers = getPlayerMatches(puuidActual, False)
@@ -140,8 +143,10 @@ def getPlayerMatches(puuid, existing: bool):
                     for player in participants:
                         if database.checkPlayerDB(player):
                             newPlayers.append(player)
-                # TODO: Hacer un try-catch y no almacenar endTime nuevo en caso de que sea vacío
-                endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
+                try:
+                    endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
+                except ValueError:
+                    continue
             # Cuarto, tras comprobar la fecha de la última partida y habiendo procesado esas 100 partidas, volvemos a buscar
             # otros 100 IDs utilizando como endTime esta fecha
             result2 = getNormalAndRankedIDs(puuid, limitAPIDate, endTime)
@@ -168,12 +173,16 @@ def getNormalAndRankedIDs(puuid, limitDate, endTime):
 def getSummonerName(puuidActual):
     summonerPUUIDAPI = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuidActual}'
     data = doRequest(summonerPUUIDAPI)
+    if data is None:
+        return None
     return data["name"]
 
 
 def getSummonerPUUID(summonerName):
     summonerNameAPI = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summonerName}'
     data = doRequest(summonerNameAPI)
+    if data is None:
+        return None
     return data["puuid"]
 
 
@@ -214,12 +223,13 @@ def doRequest(APIurl):
         response = doRequest(APIurl)
         return response
     elif response.status_code == 403 or response.status_code == 404:
-        if APIurl.startswith('https://europe.api.riotgames.com/lol/match/v5/matches/'):
-            return None
-        else:
-            print(f"Error: {response.status_code}")
-            print(f"Time3: {time.strftime('%H:%M:%S', time.localtime())}")
-            exit(1)
+        # if APIurl.startswith('https://europe.api.riotgames.com/lol/match/v5/matches/'):
+        #     return None
+        # else:
+        #     print(f"Error: {response.status_code}")
+        #     print(f"Time3: {time.strftime('%H:%M:%S', time.localtime())}")
+        #     exit(1)
+        return None
     elif response.status_code == 500 or response.status_code == 503:
         return retryRequest(APIurl, headers)
     else:
@@ -237,6 +247,8 @@ def retryRequest(APIurl, headers):
         response = requests.get(APIurl, headers=headers)
         if response.status_code == 500 or response.status_code == 503:
             x = float(2 ^ int(x))
-        else:
+        elif response.status_code == 200:
             break
+        else:
+            return None
     return response.json()
