@@ -139,3 +139,7 @@ def checkPlayerDB(player):
         # Devuelve False si no existe el jugador en la BBDD, True en caso contrario
         return False
     return True
+
+
+def getAllPlayersGames(puuid):
+    return list(dbMatches.find({'metadata.participants': puuid}))
