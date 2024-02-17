@@ -22,7 +22,7 @@ def getPlayerMatches(name, puuid):
             matches.append(matchInfo)
     elif len(matches) <= nGamesThreshold:
         # Recuperar 'nGamesThreshold - len(matches)' partidas
-        matchesIDs = api.getNormalAndRankedIDs(puuid, 0, time.time(), nGamesThreshold-len(matches))
+        matchesIDs = api.getNormalAndRankedIDs(puuid, 0, time.time(), nGamesThreshold - len(matches))
         for matchID in matchesIDs:
             matchInfo = api.getMatchInfo(matchID)
             if matchInfo is None:
@@ -36,32 +36,90 @@ def getPlayerMatches(name, puuid):
 
 
 def getMatchesPosition(name, puuid, matches):
-    top = jungle = mid = adc = supp = unknown = 0
+    topNorm = jungleNorm = midNorm = adcNorm = suppNorm = topSolo = jungleSolo = midSolo = adcSolo = suppSolo = topFlex \
+        = jungleFlex = midFlex = adcFlex = suppFlex = unknown = totalNorm = totalSolo = totalFlex = unknownQueue = 0
     for match in matches:
+        queueType = match['info']['queueId']
         info = getMatchPlayerInfo(puuid, match)
         if info is None:
             continue
         lane = info['individualPosition']
-        if lane == 'TOP':
-            top += 1
-        elif lane == 'JUNGLE':
-            jungle += 1
-        elif lane == 'MIDDLE':
-            mid += 1
-        elif lane == 'BOTTOM':
-            adc += 1
-        elif lane == 'UTILITY':
-            supp += 1
+        if queueType == 400:
+            totalNorm += 1
+            # Tratamiento de Normales
+            if lane == 'TOP':
+                topNorm += 1
+            elif lane == 'JUNGLE':
+                jungleNorm += 1
+            elif lane == 'MIDDLE':
+                midNorm += 1
+            elif lane == 'BOTTOM':
+                adcNorm += 1
+            elif lane == 'UTILITY':
+                suppNorm += 1
+            else:
+                unknown += 1
+        elif queueType == 420:
+            totalSolo += 1
+            # Tratamiento de Solo/Duo
+            if lane == 'TOP':
+                topSolo += 1
+            elif lane == 'JUNGLE':
+                jungleSolo += 1
+            elif lane == 'MIDDLE':
+                midSolo += 1
+            elif lane == 'BOTTOM':
+                adcSolo += 1
+            elif lane == 'UTILITY':
+                suppSolo += 1
+            else:
+                unknown += 1
+        elif queueType == 440:
+            totalFlex += 1
+            # Tratamiento de Flex
+            if lane == 'TOP':
+                topFlex += 1
+            elif lane == 'JUNGLE':
+                jungleFlex += 1
+            elif lane == 'MIDDLE':
+                midFlex += 1
+            elif lane == 'BOTTOM':
+                adcFlex += 1
+            elif lane == 'UTILITY':
+                suppFlex += 1
+            else:
+                unknown += 1
         else:
-            unknown += 1
+            unknownQueue += 1
+            continue
 
-    perTop = round((top * 100 / len(matches)), 2)
-    perJg = round((jungle * 100 / len(matches)), 2)
-    perMid = round((mid * 100 / len(matches)), 2)
-    perAdc = round((adc * 100 / len(matches)), 2)
-    perSupp = round((supp * 100 / len(matches)), 2)
-    print(f"El jugador {name} ha jugado en las siguientes posiciones: \nTop: {top} veces ({perTop} %)\nJungla: {jungle} veces ({perJg} %)\nMid: "
-          f"{mid} veces ({perMid} %)\nTirador: {adc} veces ({perAdc} %)\nSupport: {supp} veces ({perSupp} %)\n")
+    perNorm = round((totalNorm * 100 / len(matches)), 2)
+    perSolo = round((totalSolo * 100 / len(matches)), 2)
+    perFlex = round((totalFlex * 100 / len(matches)), 2)
+    perUnknownQueue = round((unknownQueue * 100 / len(matches)), 2)
+    print(
+        f"El jugador {name} ha jugado en las siguientes colas:\n"
+        f"{totalNorm} partidas Draft normales ({perNorm}%)\n"
+        f"{totalSolo} partidas Ranked Solo/Duo ({perSolo}%)\n"
+        f"{totalFlex} partidas Ranked Flex ({perFlex}%)\n"
+        f"{unknownQueue} partidas de otro tipo ({perUnknownQueue}%)\n"
+    )
+    totalMatchesCount = totalNorm+totalSolo+totalFlex
+    perTop = round((topNorm+topSolo+topFlex * 100 / totalMatchesCount), 2)
+    perJg = round((jungleNorm+jungleSolo+jungleFlex * 100 / totalMatchesCount), 2)
+    perMid = round((midNorm+midSolo+midFlex * 100 / totalMatchesCount), 2)
+    perAdc = round((adcNorm+adcSolo+adcFlex * 100 / totalMatchesCount), 2)
+    perSupp = round((suppNorm+suppSolo+suppFlex * 100 / totalMatchesCount), 2)
+    perUnknownPosition = round((unknown * 100 / totalMatchesCount), 2)
+    print(
+        f"También ha jugado en las siguientes posiciones: \n"
+        f"Top: {topNorm+topSolo+topFlex} veces ({perTop} %)\n"
+        f"Jungla: {jungleNorm+jungleSolo+jungleFlex} veces ({perJg} %)\n"
+        f"Mid: {midNorm+midSolo+midFlex} veces ({perMid} %)\n"
+        f"Tirador: {adcNorm+adcSolo+adcFlex} veces ({perAdc} %)\n"
+        f"Support: {suppNorm+suppSolo+suppFlex} veces ({perSupp} %)\n"
+        f"Línea desconocida: {unknown} veces ({perUnknownPosition} %)\n"
+    )
 
 
 def getMatchPlayerInfo(puuid, match):

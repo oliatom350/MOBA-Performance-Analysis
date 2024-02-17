@@ -14,5 +14,5 @@ if __name__ == '__main__':
     if api.getSummonerPUUID(summoner_name) is None:
         print(f'El jugador {summoner_name} no existe')
     else:
-        proc_data.getPlayerMatches(summoner_name)
+        proc_data.processPlayer(summoner_name)
 
