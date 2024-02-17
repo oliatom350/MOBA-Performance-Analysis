@@ -119,7 +119,7 @@ def getPlayerMatches(puuid, existing: bool):
     else:
         limitAPIDate = 1623801600
     endTime = round(time.time())
-    result = getNormalAndRankedIDs(puuid, limitAPIDate, endTime)
+    result = getNormalAndRankedIDs(puuid, limitAPIDate, endTime, 100)
     if not result:
         pass
     else:
@@ -149,7 +149,7 @@ def getPlayerMatches(puuid, existing: bool):
                     continue
             # Cuarto, tras comprobar la fecha de la última partida y habiendo procesado esas 100 partidas, volvemos a buscar
             # otros 100 IDs utilizando como endTime esta fecha
-            result2 = getNormalAndRankedIDs(puuid, limitAPIDate, endTime)
+            result2 = getNormalAndRankedIDs(puuid, limitAPIDate, endTime, 100)
             # Para salir del bucle, se comprueba si la longitud del nuevo resultado de búsquedas es 0, es decir, no hay
             # más partidas que procesar. Además, para evitar loops infinitos, se comprueba que el resultado de la
             # búsqueda no sea exactamente el mismo que en la anterior iteración
@@ -163,9 +163,9 @@ def getPlayerMatches(puuid, existing: bool):
     # Se devuelve una lista con todos los nuevos jugadores detectados para ser procesados
 
 
-def getNormalAndRankedIDs(puuid, limitDate, endTime):
-    result = getIDMatches(puuid, QueueType.Normal, limitDate, endTime, 100)
-    resultRanked = getIDMatches(puuid, QueueType.Ranked, limitDate, endTime, 100)
+def getNormalAndRankedIDs(puuid, limitDate, endTime, count):
+    result = getIDMatches(puuid, QueueType.Normal, limitDate, endTime, count)
+    resultRanked = getIDMatches(puuid, QueueType.Ranked, limitDate, endTime, count)
     result = result + resultRanked
     return result
 
