@@ -9,8 +9,9 @@ def processPlayer(name):
     puuid = api.getSummonerPUUID(name)
     matches = getPlayerMatches(name, puuid)
     # getMatchesPosition(name, puuid, matches)
-    getPlayerKDA(name, puuid, matches)
-
+    # getPlayerKDA(name, puuid, matches)
+    # getPlayerWinrate(name, puuid, matches)
+    getMeanDuration(name, puuid, matches)
 
 def getPlayerMatches(name, puuid):
     matches = database.getAllPlayersGames(puuid)
@@ -254,12 +255,17 @@ def getPlayerWinrate(name, puuid, matches):
     # TODO Si se quiere comprobar el winrate de un campeón o de una posición en una cola concreta, modificar en el futuro la función
     totalVictorias = totalDerrotas = winNormal = loseNormal = winSolo = loseSolo = winFlex = loseFlex = winUnknown = \
         loseUnknown = winTop = loseTop = winJg = loseJg = winMid = loseMid = winAdc = loseAdc = winSupp = loseSupp = 0
+    # Creamos un diccionario para los campeones
+    dicChamps = {}
+
     for match in matches:
         queueType = match['info']['queueId']
         info = getMatchPlayerInfo(puuid, match)
-        win = info['win']
         if info is None:
             continue
+        win = info['win']
+        lane = info['individualPosition']
+        champName = info['championName']
 
         if win:
             totalVictorias += 1
@@ -273,6 +279,7 @@ def getPlayerWinrate(name, puuid, matches):
             else:
                 loseUnknown += 1
         else:
+            # Winrate por colas separado de otras colas debido a que puede haber conflictos con las posiciones y así ahorramos pasos
             if queueType == 400:
                 # Tratamiento Normal
                 if win:
@@ -292,11 +299,109 @@ def getPlayerWinrate(name, puuid, matches):
                 else:
                     loseFlex += 1
 
+            # Winrate por posición
+            if lane == 'TOP':
+                if win:
+                    winTop += 1
+                else:
+                    loseTop += 1
+            elif lane == 'JUNGLE':
+                if win:
+                    winJg += 1
+                else:
+                    loseJg += 1
+            elif lane == 'MIDDLE':
+                if win:
+                    winMid += 1
+                else:
+                    loseMid += 1
+            elif lane == 'BOTTOM':
+                if win:
+                    winAdc += 1
+                else:
+                    loseAdc += 1
+            elif lane == 'UTILITY':
+                if win:
+                    winSupp += 1
+                else:
+                    loseSupp += 1
 
+        # Winrate por campeón
+        if champName in dicChamps:
+            if win:
+                dicChamps[champName][0] += 1
+            else:
+                dicChamps[champName][1] += 1
+        else:
+            if win:
+                dicChamps[champName] = [1, 0]
+            else:
+                dicChamps[champName] = [0, 1]
+
+    # Terminado el bucle de matches
+    print(f"El jugador {name} ha jugado {winUnknown+winNormal+winSolo+winFlex+loseUnknown+loseNormal+loseSolo+loseFlex} "
+          f"partidas, obteniendo los siguientes resultados:")
+    print(f"Winrate total: {round((winUnknown+winNormal+winSolo+winFlex)/(winUnknown+winNormal+winSolo+winFlex+loseUnknown+loseNormal+loseSolo+loseFlex)*100, 2)}%")
+    print(f"\nWinrate por cola:")
+    print(f"--Winrate NormalQueue: {winNormal} victorias de {winNormal+loseNormal} partidas ({round(winNormal/(winNormal+loseNormal)*100,2)}%)")
+    print(f"--Winrate Solo/Duo: {winSolo} victorias de {winSolo+loseSolo} partidas ({round(winSolo/(winSolo+loseSolo)*100,2)}%)")
+    print(f"--Winrate Flex: {winFlex} victorias de {winFlex+loseFlex} partidas ({round(winFlex/(winFlex+loseFlex)*100,2)}%)")
+    print(f"--Winrate otras colas: {winUnknown} victorias de {winUnknown+loseUnknown} partidas ({round(winUnknown/(winUnknown+loseUnknown)*100,2)}%)")
+    print(f"\nWinrate por posición:")
+    print(f"--Winrate Top: {winTop} victorias de {winTop+loseTop} partidas ({round(winTop/(winTop+loseTop)*100,2)}%)")
+    print(f"--Winrate Jungle: {winJg} victorias de {winJg+loseJg} partidas ({round(winJg/(winJg+loseJg)*100,2)}%)")
+    print(f"--Winrate Mid: {winMid} victorias de {winMid+loseMid} partidas ({round(winMid/(winMid+loseMid)*100,2)}%)")
+    print(f"--Winrate Adc: {winAdc} victorias de {winAdc+loseAdc} partidas ({round(winAdc/(winAdc+loseAdc)*100,2)}%)")
+    print(f"--Winrate Supp: {winSupp} victorias de {winSupp+loseSupp} partidas ({round(winSupp/(winSupp+loseSupp)*100,2)}%)")
+    print(f"\nWinrate por campeón:")
+    for champ, stats in sorted(dicChamps.items(), key=lambda x: sum(x[1]), reverse=True):
+        print(f"{champ}: {stats[0]} victorias de {stats[0]+stats[1]} partidas ({round(stats[0]/(stats[0]+stats[1])*100, 2)}%)")
+
+
+def getMeanDuration(name, puuid, matches):
+    # El objetivo de esta función es obtener la duración media de las partidas del jugador. Se puede ampliar a duración
+    # media por cola, duración media por campeón y duración media por posición.
+    rendiciones = remakes = duracionTotal = countMatches = 0
+    for match in matches:
+        queueType = match['info']['queueId']
+        duracion = match['info']['gameDuration']
+        info = getMatchPlayerInfo(puuid, match)
+        if info is None or queueType != 400 and queueType != 420 and queueType != 440:
+            continue
+        remake = info['gameEndedInEarlySurrender']
+        ff = info['gameEndedInSurrender']
+        if remake:
+            remakes += 1
+            continue
+        elif ff:
+            # Usamos como threshold 1500 (25 min) para evitar no contabilizar las partidas que acabaron por rendición
+            # pero tuvieron muchos minutos de juego, suficientes como para incluirlos en el cálculo de la media
+            if duracion < 1500:
+                rendiciones += 1
+                continue
+        countMatches += 1
+        duracionTotal += duracion
+    minutos = round((duracionTotal / countMatches) // 60)
+    segundos = round((duracionTotal / countMatches) % 60, 2)
+    print(f"La duración promedio de las partidas de {name} son de {minutos} minutos y {segundos} segundos")
+    print(f"Han ocurrido {remakes} remakes y {rendiciones} rendiciones")
+
+
+def getGoldDiffs(name, puuid, matches):
+    # El objetivo de la función es obtener la diferencia de oro promedio que suele sacar el jugador a su rival de posición
+    # TODO Función dependiente de tener TIMELINE guardada de la partida concreta
+    dicMatches = {}
 
 
 # FUNCIONES ESTADÍSTICAS DESCRIPTIVAS
-
+def definingChampPool(name, puuid, matches):
+    # El objetivo es definir una champion pool de 4 los campeones recomendados como máximo que mejor rendimiento dan al
+    # jugador basándonos en diferentes criterios:
+    # - Historial de resultados de cada campeón individual
+    # - Historial de resultados de un tipo de campeón (fighter, tank, etc.)
+    # - Maestría del jugador con los campeones
+    # TODO Función tocha, realizar con tiempo
+    pass
 
 # FUNCIONES GRÁFICAS TEMPORALES
 

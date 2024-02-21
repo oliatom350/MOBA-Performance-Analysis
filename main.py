@@ -8,11 +8,10 @@ if __name__ == '__main__':
 
     api.updateChampions()
     summoner_name = input("Introduce tu nombre de usuario: ")
-    # puuidInicial = api.getSummonerPUUID(summoner_name)
-    # api.getMatches(puuidInicial)
-
-    if api.getSummonerPUUID(summoner_name) is None:
+    puuidInicial = api.getSummonerPUUID(summoner_name)
+    if puuidInicial is None:
         print(f'El jugador {summoner_name} no existe')
     else:
+        # api.getMatches(puuidInicial)
         proc_data.processPlayer(summoner_name)
 

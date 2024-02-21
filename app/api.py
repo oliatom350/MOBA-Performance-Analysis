@@ -132,6 +132,8 @@ def getPlayerMatches(puuid, existing: bool):
             # realizar la siguiente búsqueda
             for matchID in result:
                 if database.checkGameDB(matchID) or database.checkGameBlacklist(matchID):
+                    if not database.checkMatchTimeline(matchID):
+                        storeMatchTimeline(matchID)
                     continue
                 else:
                     matchInfo = getMatchInfo(matchID)
@@ -139,6 +141,8 @@ def getPlayerMatches(puuid, existing: bool):
                     # continúa el procesamiento ignorando los IDs sin información
                     if matchInfo is None:
                         continue
+                    if not database.checkMatchTimeline(matchID):
+                        storeMatchTimeline(matchID)
                     participants = database.storeGameDB(matchInfo)
                     for player in participants:
                         if database.checkPlayerDB(player):
@@ -200,6 +204,14 @@ def getMatchInfo(matchID):
         print(f'No se ha recuperado la partida con id {matchID}')
         database.storeEmptyGameIDDB(matchID)
     return matchInfo
+
+
+def storeMatchTimeline(matchID):
+    matchTimelineAPI = f'https://europe.api.riotgames.com/lol/match/v5/matches/{matchID}/timeline'
+    timeline = doRequest(matchTimelineAPI)
+    if timeline is None:
+        print(f'No se ha recuperado la timeline de la partida con id {matchID}')
+    database.storeGameTimelineDB(timeline)
 
 
 # def getNewPlayers(matchInfo):

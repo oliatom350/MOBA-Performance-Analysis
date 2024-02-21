@@ -8,6 +8,7 @@ dbChampions = db['Champions']
 dbMatches = db['Matches']
 dbSummoner = db['Summoners']
 dbBlacklistMatch = db['MatchBlacklist']
+dbTimeline = db['MatchTimeline']
 
 
 def insertPlayerDB(name, puuid, data):
@@ -143,3 +144,27 @@ def checkPlayerDB(player):
 
 def getAllPlayersGames(puuid):
     return list(dbMatches.find({'metadata.participants': puuid}))
+
+
+def checkMatchTimeline(matchID):
+    existing_match = dbTimeline.find_one({"matchId": matchID})
+    if existing_match is None:
+        return False
+    return True
+
+
+def storeGameTimelineDB(timeline):
+    if timeline is None:
+        return False
+    matchID = timeline["metadata"]["matchId"]
+    existing_match = dbTimeline.find_one({"metadata.matchId": matchID})
+
+    if existing_match is None:
+        # No existe, realizamos la inserción
+        dbTimeline.insert_one(timeline)
+        print(f"Se ha insertado la timeline de una nueva partida con matchId: {matchID}")
+        return True
+    else:
+        # Ya existe, esta vez NO actualizamos la información
+        print(f"Ya existe la timeline una partida con matchId: {matchID}.")
+        return False
