@@ -132,8 +132,8 @@ def getPlayerMatches(puuid, existing: bool):
             # realizar la siguiente búsqueda
             for matchID in result:
                 if database.checkGameDB(matchID) or database.checkGameBlacklist(matchID):
-                    if not database.checkMatchTimeline(matchID):
-                        storeMatchTimeline(matchID)
+                    # if not database.checkMatchTimeline(matchID):
+                    #     storeMatchTimeline(matchID)
                     continue
                 else:
                     matchInfo = getMatchInfo(matchID)
@@ -141,8 +141,8 @@ def getPlayerMatches(puuid, existing: bool):
                     # continúa el procesamiento ignorando los IDs sin información
                     if matchInfo is None:
                         continue
-                    if not database.checkMatchTimeline(matchID):
-                        storeMatchTimeline(matchID)
+                    # if not database.checkMatchTimeline(matchID):
+                    #     storeMatchTimeline(matchID)
                     participants = database.storeGameDB(matchInfo)
                     for player in participants:
                         if database.checkPlayerDB(player):

@@ -90,6 +90,7 @@ def setLastGame(puuid, time):
 def checkGameDB(matchID):
     match = dbMatches.find_one({"metadata.matchId": matchID})
     if match:
+        print(f"Ya existe una partida con matchId: {matchID}.")
         return True
     else:
         return False
@@ -104,33 +105,24 @@ def checkGameAppDB(matchID):
 
 
 def storeGameDB(matchInfo):
+    # A esta función sólo se llega si no existe la partida en la BBDD
     if matchInfo is None:
         return []
     matchID = matchInfo["metadata"]["matchId"]
-    existing_match = dbMatches.find_one({"metadata.matchId": matchID})
-
-    if existing_match is None:
-        # No existe, realizamos la inserción
-        dbMatches.insert_one(matchInfo)
-        print(f"Se ha insertado una nueva partida con matchId: {matchID}")
-        return matchInfo["metadata"]["participants"]
-    else:
-        # Ya existe, esta vez NO actualizamos la información
-        print(f"Ya existe una partida con matchId: {matchID}.")
-        return []
+    dbMatches.insert_one(matchInfo)
+    print(f"Se ha insertado una nueva partida con matchId: {matchID}")
+    return matchInfo["metadata"]["participants"]
 
 
 def storeEmptyGameIDDB(matchID):
-    existing_match = dbBlacklistMatch.find_one({"matchId": matchID})
-    if existing_match is None:
-        # No existe, realizamos la inserción
-        dbBlacklistMatch.insert_one({"matchId": matchID})
+    dbBlacklistMatch.insert_one({"matchId": matchID})
 
 
 def checkGameBlacklist(matchID):
     existing_match = dbBlacklistMatch.find_one({"matchId": matchID})
     if existing_match is None:
         return False
+    print(f"Ya existe una partida vacía con matchId: {matchID}.")
     return True
 
 
@@ -150,6 +142,7 @@ def checkMatchTimeline(matchID):
     existing_match = dbTimeline.find_one({"matchId": matchID})
     if existing_match is None:
         return False
+    print(f"Ya existe la timeline una partida con matchId: {matchID}.")
     return True
 
 
@@ -157,14 +150,6 @@ def storeGameTimelineDB(timeline):
     if timeline is None:
         return False
     matchID = timeline["metadata"]["matchId"]
-    existing_match = dbTimeline.find_one({"metadata.matchId": matchID})
-
-    if existing_match is None:
-        # No existe, realizamos la inserción
-        dbTimeline.insert_one(timeline)
-        print(f"Se ha insertado la timeline de una nueva partida con matchId: {matchID}")
-        return True
-    else:
-        # Ya existe, esta vez NO actualizamos la información
-        print(f"Ya existe la timeline una partida con matchId: {matchID}.")
-        return False
+    dbTimeline.insert_one(timeline)
+    print(f"Se ha insertado la timeline de una nueva partida con matchId: {matchID}")
+    return True
