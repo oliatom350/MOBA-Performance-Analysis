@@ -141,6 +141,9 @@ def getPlayerMatches(puuid, existing: bool):
                     # continúa el procesamiento ignorando los IDs sin información
                     if matchInfo is None:
                         continue
+                    if matchInfo['info']['queueId'] != 400 and matchInfo['info']['queueId'] != 420 and matchInfo['info']['queueId'] != 440:
+                        print(f"La partida {matchID} no es Normal o Ranked y no se almacena")
+                        continue
                     # if not database.checkMatchTimeline(matchID):
                     #     storeMatchTimeline(matchID)
                     participants = database.storeGameDB(matchInfo)
@@ -170,6 +173,12 @@ def getPlayerMatches(puuid, existing: bool):
 def getNormalAndRankedIDs(puuid, limitDate, endTime, count):
     result = getIDMatches(puuid, QueueType.Normal, limitDate, endTime, count)
     resultRanked = getIDMatches(puuid, QueueType.Ranked, limitDate, endTime, count)
+    if result is None and resultRanked is not None:
+        return resultRanked
+    elif result is not None and resultRanked is None:
+        return result
+    elif result is None and resultRanked is None:
+        return None
     result = result + resultRanked
     return result
 
@@ -214,11 +223,6 @@ def storeMatchTimeline(matchID):
     database.storeGameTimelineDB(timeline)
 
 
-# def getNewPlayers(matchInfo):
-#     # TODO Debe comprobar cuáles de todos los jugadores de la partida no están en la base de datos y devolverlos
-#     pass
-
-
 def doRequest(APIurl):
     headers = {'X-Riot-Token': teamAnalyticAPIKey}
     response = requests.get(APIurl, headers=headers)
@@ -230,17 +234,36 @@ def doRequest(APIurl):
         waitTime = int(response.headers["retry-after"])
         print(f"Esperando {waitTime} segundos para continuar con la petición de partidas...")
         time.sleep(int(waitTime / 2))
-        print(f"Esperando {int(waitTime - waitTime / 2 + 1)} segundos para continuar con la petición de partidas...")
-        time.sleep(int(waitTime - waitTime / 2 + 1))
+        print(f"Esperando {int(waitTime / 2)} segundos para continuar con la petición de partidas...")
+        time.sleep(int(waitTime / 2))
         response = doRequest(APIurl)
         return response
-    elif response.status_code == 403 or response.status_code == 404:
-        # if APIurl.startswith('https://europe.api.riotgames.com/lol/match/v5/matches/'):
-        #     return None
-        # else:
-        #     print(f"Error: {response.status_code}")
-        #     print(f"Time3: {time.strftime('%H:%M:%S', time.localtime())}")
-        #     exit(1)
+    elif response.status_code == 400 or response.status_code == 403 or response.status_code == 404:
+        return None
+    elif response.status_code == 500 or response.status_code == 503:
+        return retryRequest(APIurl, headers)
+    else:
+        print(f"Error: {response.status_code}")
+        print(f"Time4: {time.strftime('%H:%M:%S', time.localtime())}")
+        exit(1)
+
+
+def doRequestTesting(APIurl):
+    headers = {'X-Riot-Token': developerAPIKey}
+    response = requests.get(APIurl, headers=headers)
+
+    # Tratamiento de errores de respuesta
+    if response.status_code == 200:
+        return response.json()
+    elif response.status_code == 429:
+        waitTime = int(response.headers["retry-after"])
+        print(f"Esperando {waitTime} segundos para continuar con la petición de partidas...")
+        time.sleep(int(waitTime / 2))
+        print(f"Esperando {int(waitTime / 2)} segundos para continuar con la petición de partidas...")
+        time.sleep(int(waitTime / 2))
+        response = doRequest(APIurl)
+        return response
+    elif response.status_code == 400 or response.status_code == 403 or response.status_code == 404:
         return None
     elif response.status_code == 500 or response.status_code == 503:
         return retryRequest(APIurl, headers)
@@ -253,7 +276,7 @@ def doRequest(APIurl):
 def retryRequest(APIurl, headers):
     x = 0.5
     while True:
-        print(f"Time: {time.time()}")
+        print(f"Time: {round(time.time())}")
         print(f"Esperando {x} segundos")
         time.sleep(x)
         response = requests.get(APIurl, headers=headers)

@@ -153,3 +153,24 @@ def storeGameTimelineDB(timeline):
     dbTimeline.insert_one(timeline)
     print(f"Se ha insertado la timeline de una nueva partida con matchId: {matchID}")
     return True
+
+
+def getQueues():
+    normal = solo = flex = unknown = 0
+    result = dbMatches.find()
+    for match in result:
+        if match['info']['queueId'] == 400:
+            normal += 1
+        elif match['info']['queueId'] == 420:
+            solo += 1
+        elif match['info']['queueId'] == 440:
+            flex += 1
+        else:
+            unknown += 1
+
+    print(f"{dbMatches.count_documents({})}")
+    print(normal)
+    print(solo)
+    print(flex)
+    print(unknown)
+

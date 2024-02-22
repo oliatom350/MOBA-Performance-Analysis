@@ -8,16 +8,21 @@ nGamesThreshold = 100
 def processPlayer(name):
     puuid = api.getSummonerPUUID(name)
     matches = getPlayerMatches(name, puuid)
-    # getMatchesPosition(name, puuid, matches)
-    # getPlayerKDA(name, puuid, matches)
-    # getPlayerWinrate(name, puuid, matches)
-    getMeanDuration(name, puuid, matches)
+    if matches is not None:
+        getMatchesPosition(name, puuid, matches)
+        getPlayerKDA(name, puuid, matches)
+        getPlayerWinrate(name, puuid, matches)
+        getMeanDuration(name, puuid, matches)
+
 
 def getPlayerMatches(name, puuid):
     matches = database.getAllPlayersGames(puuid)
     if len(matches) == 0:
         # Recuperar las primeras 100 partidas normales y las primeras 100 ranked del jugador
-        matchesIDs = api.getNormalAndRankedIDs(puuid, 0, time.time(), 100)
+        matchesIDs = api.getNormalAndRankedIDs(puuid, 0, round(time.time()), 100)
+        if matchesIDs is None:
+            print(f'No se han recuperado partidas del jugador {name}')
+            return None
         for matchID in matchesIDs:
             matchInfo = api.getMatchInfo(matchID)
             if matchInfo is None:
@@ -25,12 +30,38 @@ def getPlayerMatches(name, puuid):
             matches.append(matchInfo)
     elif len(matches) <= nGamesThreshold:
         # Recuperar 'nGamesThreshold - len(matches)' partidas
-        matchesIDs = api.getNormalAndRankedIDs(puuid, 0, time.time(), nGamesThreshold - len(matches))
-        for matchID in matchesIDs:
-            matchInfo = api.getMatchInfo(matchID)
-            if matchInfo is None:
-                continue
-            matches.append(matchInfo)
+        while len(matches) != nGamesThreshold:
+            matchesIDs = api.getNormalAndRankedIDs(puuid, 0, round(time.time()), nGamesThreshold - len(matches))
+            if matchesIDs is None:
+                break
+            for matchID in matchesIDs:
+                matchInfo = api.getMatchInfo(matchID)
+                if matchInfo['info']['queueId'] != 400 and matchInfo['info']['queueId'] != 420 and matchInfo['info']['queueId'] != 440 or matchInfo is None:
+                    continue
+                else:
+                    matches.append(matchInfo)
+    # TODO Introducir otro criterio que compruebe las partidas más recientes y las cargue en caso de que no estén
+    # else:
+    #     limitDate = 0
+    #     endTime = round(time.time())
+    #     matchInfo = {}
+    #     while True:
+    #         matchesIDs = api.getNormalAndRankedIDs(puuid, limitDate, endTime, 100)
+    #         if matchesIDs is None:
+    #             break
+    #         for matchID in matchesIDs:
+    #             if database.checkGameDB(matchesIDs):
+    #                 continue
+    #             matchInfo = api.getMatchInfo(matchID)
+    #             if matchInfo['info']['queueId'] != 400 and matchInfo['info']['queueId'] != 420 and \
+    #                     matchInfo['info']['queueId'] != 440 or matchInfo is None:
+    #                 continue
+    #             else:
+    #                 matches.append(matchInfo)
+    #         try:
+    #             endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
+    #         except ValueError:
+    #             continue
 
     # Una vez llegados a este punto, deberían haberse recuperado un número mínimo de 100 partidas totales.
     # En el caso de que no sean suficientes, se mostrará un mensaje de que no hay suficientes datos para analizar al jugador
@@ -343,16 +374,52 @@ def getPlayerWinrate(name, puuid, matches):
           f"partidas, obteniendo los siguientes resultados:")
     print(f"Winrate total: {round((winUnknown+winNormal+winSolo+winFlex)/(winUnknown+winNormal+winSolo+winFlex+loseUnknown+loseNormal+loseSolo+loseFlex)*100, 2)}%")
     print(f"\nWinrate por cola:")
-    print(f"--Winrate NormalQueue: {winNormal} victorias de {winNormal+loseNormal} partidas ({round(winNormal/(winNormal+loseNormal)*100,2)}%)")
-    print(f"--Winrate Solo/Duo: {winSolo} victorias de {winSolo+loseSolo} partidas ({round(winSolo/(winSolo+loseSolo)*100,2)}%)")
-    print(f"--Winrate Flex: {winFlex} victorias de {winFlex+loseFlex} partidas ({round(winFlex/(winFlex+loseFlex)*100,2)}%)")
-    print(f"--Winrate otras colas: {winUnknown} victorias de {winUnknown+loseUnknown} partidas ({round(winUnknown/(winUnknown+loseUnknown)*100,2)}%)")
+    if winNormal+loseNormal != 0:
+        print(f"--Winrate NormalQueue: {winNormal} victorias de {winNormal+loseNormal} partidas ({round(winNormal/(winNormal+loseNormal)*100,2)}%)")
+    else:
+        print(f"No ha jugado partidas normales")
+
+    if winSolo+loseSolo != 0:
+        print(f"--Winrate Solo/Duo: {winSolo} victorias de {winSolo+loseSolo} partidas ({round(winSolo/(winSolo+loseSolo)*100,2)}%)")
+    else:
+        print(f"No ha jugado partidas solo/duo")
+
+    if winFlex+loseFlex != 0:
+        print(f"--Winrate Flex: {winFlex} victorias de {winFlex+loseFlex} partidas ({round(winFlex/(winFlex+loseFlex)*100,2)}%)")
+    else:
+        print(f"No ha jugado partidas flex")
+
+    if winUnknown+loseUnknown != 0:
+        print(f"--Winrate otras colas: {winUnknown} victorias de {winUnknown+loseUnknown} partidas ({round(winUnknown/(winUnknown+loseUnknown)*100,2)}%)")
+    else:
+        print(f"No hay datos de partidas en otras colas")
+
     print(f"\nWinrate por posición:")
-    print(f"--Winrate Top: {winTop} victorias de {winTop+loseTop} partidas ({round(winTop/(winTop+loseTop)*100,2)}%)")
-    print(f"--Winrate Jungle: {winJg} victorias de {winJg+loseJg} partidas ({round(winJg/(winJg+loseJg)*100,2)}%)")
-    print(f"--Winrate Mid: {winMid} victorias de {winMid+loseMid} partidas ({round(winMid/(winMid+loseMid)*100,2)}%)")
-    print(f"--Winrate Adc: {winAdc} victorias de {winAdc+loseAdc} partidas ({round(winAdc/(winAdc+loseAdc)*100,2)}%)")
-    print(f"--Winrate Supp: {winSupp} victorias de {winSupp+loseSupp} partidas ({round(winSupp/(winSupp+loseSupp)*100,2)}%)")
+    if winTop+loseTop != 0:
+        print(f"--Winrate Top: {winTop} victorias de {winTop+loseTop} partidas ({round(winTop/(winTop+loseTop)*100,2)}%)")
+    else:
+        print(f"No ha jugado en la posición de Top")
+
+    if winJg+loseJg != 0:
+        print(f"--Winrate Jungle: {winJg} victorias de {winJg+loseJg} partidas ({round(winJg/(winJg+loseJg)*100,2)}%)")
+    else:
+        print(f"No ha jugado en la posición de Jungla")
+
+    if winMid+loseMid != 0:
+        print(f"--Winrate Mid: {winMid} victorias de {winMid+loseMid} partidas ({round(winMid/(winMid+loseMid)*100,2)}%)")
+    else:
+        print(f"No ha jugado en la posición de Mid")
+
+    if winAdc+loseAdc != 0:
+        print(f"--Winrate Adc: {winAdc} victorias de {winAdc+loseAdc} partidas ({round(winAdc/(winAdc+loseAdc)*100,2)}%)")
+    else:
+        print(f"No ha jugado en la posición de Tirador")
+
+    if winSupp+loseSupp != 0:
+        print(f"--Winrate Supp: {winSupp} victorias de {winSupp+loseSupp} partidas ({round(winSupp/(winSupp+loseSupp)*100,2)}%)")
+    else:
+        print(f"No ha jugado en la posición de Support")
+
     print(f"\nWinrate por campeón:")
     for champ, stats in sorted(dicChamps.items(), key=lambda x: sum(x[1]), reverse=True):
         print(f"{champ}: {stats[0]} victorias de {stats[0]+stats[1]} partidas ({round(stats[0]/(stats[0]+stats[1])*100, 2)}%)")
@@ -401,6 +468,7 @@ def definingChampPool(name, puuid, matches):
     # - Historial de resultados de un tipo de campeón (fighter, tank, etc.)
     # - Maestría del jugador con los campeones
     # TODO Función tocha, realizar con tiempo
+
     pass
 
 # FUNCIONES GRÁFICAS TEMPORALES
