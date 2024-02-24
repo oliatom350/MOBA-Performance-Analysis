@@ -174,3 +174,11 @@ def getQueues():
     print(flex)
     print(unknown)
 
+
+def getChampionTags():
+    dicChamps = {}
+    for champ in dbChampions.find({}):
+        name = champ['data']['name']
+        tags = champ['data']['tags']
+        dicChamps[name] = tags
+    return dicChamps

@@ -123,11 +123,8 @@ def getPlayerMatches(puuid, existing: bool):
     if not result:
         pass
     else:
-        # Segundo, comprobamos la fecha de la primera partida (la última que ha jugado) y la almacenamos como
-        # información dentro del fichero del jugador
-        setSummonerLastGame(puuid, result[0])
         while result:
-            # Tercero, de forma iterativa, comprobamos si la partida ya existe en la BBDD y, solo si no es la última,
+            # Segundo, de forma iterativa, comprobamos si la partida ya existe en la BBDD y, solo si no es la última,
             # simplemente guardarla en la BBDD. En el caso de ser la última, recupera también su fecha de creación para
             # realizar la siguiente búsqueda
             for matchID in result:
@@ -143,6 +140,10 @@ def getPlayerMatches(puuid, existing: bool):
                         continue
                     # if not database.checkMatchTimeline(matchID):
                     #     storeMatchTimeline(matchID)
+                    # Comprobamos la fecha de la primera partida (la última que ha jugado) y la almacenamos como
+                    # información dentro del fichero del jugador
+                    if matchID == result[0]:
+                        setSummonerLastGame(puuid, matchInfo)
                     participants = database.storeGameDB(matchInfo)
                     for player in participants:
                         if database.checkPlayerDB(player):
@@ -151,7 +152,7 @@ def getPlayerMatches(puuid, existing: bool):
                     endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
                 except ValueError:
                     continue
-            # Cuarto, tras comprobar la fecha de la última partida y habiendo procesado esas 100 partidas, volvemos a buscar
+            # Tercero, tras comprobar la fecha de la última partida y habiendo procesado esas 100 partidas, volvemos a buscar
             # otros 100 IDs utilizando como endTime esta fecha
             result2 = getNormalAndRankedIDs(puuid, limitAPIDate, endTime, 100)
             # Para salir del bucle, se comprueba si la longitud del nuevo resultado de búsquedas es 0, es decir, no hay
@@ -196,10 +197,8 @@ def getSummonerPUUID(summonerName):
     return data["puuid"]
 
 
-def setSummonerLastGame(puuid, matchID):
-    matchesInfoAPI = f'https://europe.api.riotgames.com/lol/match/v5/matches/{matchID}'
-    data = doRequest(matchesInfoAPI)
-    matchDate = data['info']['gameCreation']
+def setSummonerLastGame(puuid, matchInfo):
+    matchDate = matchInfo['info']['gameCreation']
     database.setLastGame(puuid, matchDate)
 
 

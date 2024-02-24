@@ -9,10 +9,11 @@ def processPlayer(name):
     puuid = api.getSummonerPUUID(name)
     matches = getPlayerMatches(name, puuid)
     if matches is not None:
-        getMatchesPosition(name, puuid, matches)
-        getPlayerKDA(name, puuid, matches)
-        getPlayerWinrate(name, puuid, matches)
-        getMeanDuration(name, puuid, matches)
+        # getMatchesPosition(name, puuid, matches)
+        # getPlayerKDA(name, puuid, matches)
+        # getPlayerWinrate(name, puuid, matches)
+        # getMeanDuration(name, puuid, matches)
+        definingChampPool(name, puuid, matches)
 
 
 def getPlayerMatches(name, puuid):
@@ -48,7 +49,7 @@ def getPlayerMatches(name, puuid):
         matchInfo = {}
         while True:
             matchesIDs = api.getNormalAndRankedIDs(puuid, limitDate, endTime, 100)
-            if matchesIDs is None:
+            if matchesIDs is None or matchesIDs is [] or endTime < limitDate:
                 break
             for matchID in matchesIDs:
                 if database.checkGameDB(matchesIDs):
@@ -59,10 +60,10 @@ def getPlayerMatches(name, puuid):
                     continue
                 else:
                     matches.append(matchInfo)
-            try:
-                endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
-            except ValueError:
-                continue
+                try:
+                    endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
+                except ValueError:
+                    continue
 
     # Una vez llegados a este punto, deberían haberse recuperado un número mínimo de 100 partidas totales.
     # En el caso de que no sean suficientes, se mostrará un mensaje de que no hay suficientes datos para analizar al jugador
@@ -428,6 +429,7 @@ def getPlayerWinrate(name, puuid, matches):
 
     return dicChamps
 
+
 def getMeanDuration(name, puuid, matches):
     # El objetivo de esta función es obtener la duración media de las partidas del jugador. Se puede ampliar a duración
     # media por cola, duración media por campeón y duración media por posición.
@@ -470,16 +472,36 @@ def definingChampPool(name, puuid, matches):
     # - Historial de resultados de cada campeón individual
     # - Historial de resultados de un tipo de campeón (fighter, tank, etc.)
     # - Maestría del jugador con los campeones
-    # TODO Función tocha, realizar con tiempo
     dicChamps = getPlayerWinrate(name, puuid, matches)
     # Filtramos usando como threshold 4 partidas jugadas
-    for champ in dicChamps:
+    poorChamps = []
+    for champ, stats in dicChamps.items():
         if sum(dicChamps[champ]) < 4:
-            dicChamps.pop(champ)
+            poorChamps.append(champ)
+    for champ in poorChamps:
+        dicChamps.pop(champ)
+
+    # Apartado de resultados por campeón
     winratesPerChampion = [(champ, stats[0] / sum(stats)) for champ, stats in dicChamps.items()]
     winratesPerChampion = sorted(winratesPerChampion, key=lambda x: x[1], reverse=True)
     dicChampsSorted = {champ: dicChamps[champ] for champ, _ in winratesPerChampion}
-    pass
+    print(dicChampsSorted)
+
+    # Apartado de resultados por tipo de campeón
+    champTags = database.getChampionTags()
+    winratesPerTag = {}
+    for champ, stats in dicChamps.items():
+        tags = champTags.get(champ, [])
+        for tag in tags:
+            if tag not in winratesPerTag:
+                winratesPerTag[tag] = [0, 0]
+            winratesPerTag[tag][0] += stats[0]
+            winratesPerTag[tag][1] += stats[1]
+    print(winratesPerTag)
+
+    # Apartado de maestrías
+
+
 
 def getResultsWithPartner():
     pass
