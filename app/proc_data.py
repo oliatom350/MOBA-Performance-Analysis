@@ -500,10 +500,22 @@ def definingChampPool(name, puuid, matches):
     print(winratesPerTag)
 
     # Apartado de maestrías
+    champMasteries = database.getSummonerMasteries(puuid)
+    print(champMasteries)
 
+    # TODO Realizar función matemática que asigne unos puntos en base al historial con el campeón, con el tipo del campeón y las maestrías
+    #  y seleccione los 4 primeros asumiendo que deben ser 1 champion AD, 1 champion AP y 2 comfort picks
 
 
 def getResultsWithPartner():
+    pass
+
+
+def getWinrateAgainstChampions():
+    pass
+
+
+def getWinrateAlongChampions():
     pass
 # FUNCIONES GRÁFICAS TEMPORALES
 

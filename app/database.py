@@ -182,3 +182,12 @@ def getChampionTags():
         tags = champ['data']['tags']
         dicChamps[name] = tags
     return dicChamps
+
+
+def getSummonerMasteries(puuid):
+    data = dbSummoner.find_one({'puuid': puuid})
+    if data:
+        if 'championMasteries' in data:
+            return data['championMasteries']
+    return None
+
