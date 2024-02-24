@@ -31,7 +31,8 @@ def getPlayerMatches(name, puuid):
     elif len(matches) <= nGamesThreshold:
         # Recuperar 'nGamesThreshold - len(matches)' partidas
         while len(matches) != nGamesThreshold:
-            matchesIDs = api.getNormalAndRankedIDs(puuid, 0, round(time.time()), nGamesThreshold - len(matches))
+            # matchesIDs = api.getNormalAndRankedIDs(puuid, 0, round(time.time()), nGamesThreshold - len(matches))
+            matchesIDs = api.getNormalAndRankedIDs(puuid, 0, round(time.time()), 100)
             if matchesIDs is None:
                 break
             for matchID in matchesIDs:
@@ -40,28 +41,28 @@ def getPlayerMatches(name, puuid):
                     continue
                 else:
                     matches.append(matchInfo)
-    # TODO Introducir otro criterio que compruebe las partidas más recientes y las cargue en caso de que no estén
-    # else:
-    #     limitDate = 0
-    #     endTime = round(time.time())
-    #     matchInfo = {}
-    #     while True:
-    #         matchesIDs = api.getNormalAndRankedIDs(puuid, limitDate, endTime, 100)
-    #         if matchesIDs is None:
-    #             break
-    #         for matchID in matchesIDs:
-    #             if database.checkGameDB(matchesIDs):
-    #                 continue
-    #             matchInfo = api.getMatchInfo(matchID)
-    #             if matchInfo['info']['queueId'] != 400 and matchInfo['info']['queueId'] != 420 and \
-    #                     matchInfo['info']['queueId'] != 440 or matchInfo is None:
-    #                 continue
-    #             else:
-    #                 matches.append(matchInfo)
-    #         try:
-    #             endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
-    #         except ValueError:
-    #             continue
+    # TODO Verificar los IDs antes de realizar la búsqueda en la API
+    else:
+        limitDate = database.getLastGame(puuid)
+        endTime = round(time.time())
+        matchInfo = {}
+        while True:
+            matchesIDs = api.getNormalAndRankedIDs(puuid, limitDate, endTime, 100)
+            if matchesIDs is None:
+                break
+            for matchID in matchesIDs:
+                if database.checkGameDB(matchesIDs):
+                    continue
+                matchInfo = api.getMatchInfo(matchID)
+                if matchInfo['info']['queueId'] != 400 and matchInfo['info']['queueId'] != 420 and \
+                        matchInfo['info']['queueId'] != 440 or matchInfo is None:
+                    continue
+                else:
+                    matches.append(matchInfo)
+            try:
+                endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
+            except ValueError:
+                continue
 
     # Una vez llegados a este punto, deberían haberse recuperado un número mínimo de 100 partidas totales.
     # En el caso de que no sean suficientes, se mostrará un mensaje de que no hay suficientes datos para analizar al jugador
@@ -421,9 +422,11 @@ def getPlayerWinrate(name, puuid, matches):
         print(f"No ha jugado en la posición de Support")
 
     print(f"\nWinrate por campeón:")
+    # Se imprimen los campeones con más partidas jugadas
     for champ, stats in sorted(dicChamps.items(), key=lambda x: sum(x[1]), reverse=True):
         print(f"{champ}: {stats[0]} victorias de {stats[0]+stats[1]} partidas ({round(stats[0]/(stats[0]+stats[1])*100, 2)}%)")
 
+    return dicChamps
 
 def getMeanDuration(name, puuid, matches):
     # El objetivo de esta función es obtener la duración media de las partidas del jugador. Se puede ampliar a duración
@@ -451,13 +454,13 @@ def getMeanDuration(name, puuid, matches):
     minutos = round((duracionTotal / countMatches) // 60)
     segundos = round((duracionTotal / countMatches) % 60, 2)
     print(f"La duración promedio de las partidas de {name} son de {minutos} minutos y {segundos} segundos")
-    print(f"Han ocurrido {remakes} remakes y {rendiciones} rendiciones")
+    print(f"Han ocurrido {remakes} remake(s) y {rendiciones} rendicion(es)")
 
 
-def getGoldDiffs(name, puuid, matches):
+def getGoldDiffs(name, puuid, matchTimeline):
     # El objetivo de la función es obtener la diferencia de oro promedio que suele sacar el jugador a su rival de posición
     # TODO Función dependiente de tener TIMELINE guardada de la partida concreta
-    dicMatches = {}
+    pass
 
 
 # FUNCIONES ESTADÍSTICAS DESCRIPTIVAS
@@ -468,9 +471,18 @@ def definingChampPool(name, puuid, matches):
     # - Historial de resultados de un tipo de campeón (fighter, tank, etc.)
     # - Maestría del jugador con los campeones
     # TODO Función tocha, realizar con tiempo
-
+    dicChamps = getPlayerWinrate(name, puuid, matches)
+    # Filtramos usando como threshold 4 partidas jugadas
+    for champ in dicChamps:
+        if sum(dicChamps[champ]) < 4:
+            dicChamps.pop(champ)
+    winratesPerChampion = [(champ, stats[0] / sum(stats)) for champ, stats in dicChamps.items()]
+    winratesPerChampion = sorted(winratesPerChampion, key=lambda x: x[1], reverse=True)
+    dicChampsSorted = {champ: dicChamps[champ] for champ, _ in winratesPerChampion}
     pass
 
+def getResultsWithPartner():
+    pass
 # FUNCIONES GRÁFICAS TEMPORALES
 
 

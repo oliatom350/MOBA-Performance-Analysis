@@ -31,9 +31,9 @@ def insertPlayerDB(name, puuid, data):
 
 def updateChampionsDB(json):
     for champ_name, champ_data in json['data'].items():
-        champ = {champ_name: champ_data}
+        champ = {'data': champ_data}
 
-        existing_champion = dbChampions.find_one({f"{champ_name}.id": champ_data['id']})
+        existing_champion = dbChampions.find_one({f"data.id": champ_data['id']})
 
         if existing_champion is None:
             # No existe, realizamos la inserción
@@ -122,7 +122,7 @@ def checkGameBlacklist(matchID):
     existing_match = dbBlacklistMatch.find_one({"matchId": matchID})
     if existing_match is None:
         return False
-    print(f"Ya existe una partida vacía con matchId: {matchID}.")
+    print(f"Ya existe una partida en la blacklist con matchId: {matchID}.")
     return True
 
 

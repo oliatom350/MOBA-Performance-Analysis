@@ -141,9 +141,6 @@ def getPlayerMatches(puuid, existing: bool):
                     # continúa el procesamiento ignorando los IDs sin información
                     if matchInfo is None:
                         continue
-                    if matchInfo['info']['queueId'] != 400 and matchInfo['info']['queueId'] != 420 and matchInfo['info']['queueId'] != 440:
-                        print(f"La partida {matchID} no es Normal o Ranked y no se almacena")
-                        continue
                     # if not database.checkMatchTimeline(matchID):
                     #     storeMatchTimeline(matchID)
                     participants = database.storeGameDB(matchInfo)
@@ -212,6 +209,10 @@ def getMatchInfo(matchID):
     if matchInfo is None:
         print(f'No se ha recuperado la partida con id {matchID}')
         database.storeEmptyGameIDDB(matchID)
+    elif matchInfo['info']['queueId'] != 400 and matchInfo['info']['queueId'] != 420 and matchInfo['info']['queueId'] != 440:
+        print(f"La partida {matchID} no es Normal o Ranked y no se almacena")
+        database.storeEmptyGameIDDB(matchID)
+        return None
     return matchInfo
 
 
@@ -225,31 +226,6 @@ def storeMatchTimeline(matchID):
 
 def doRequest(APIurl):
     headers = {'X-Riot-Token': teamAnalyticAPIKey}
-    response = requests.get(APIurl, headers=headers)
-
-    # Tratamiento de errores de respuesta
-    if response.status_code == 200:
-        return response.json()
-    elif response.status_code == 429:
-        waitTime = int(response.headers["retry-after"])
-        print(f"Esperando {waitTime} segundos para continuar con la petición de partidas...")
-        time.sleep(int(waitTime / 2))
-        print(f"Esperando {int(waitTime / 2)} segundos para continuar con la petición de partidas...")
-        time.sleep(int(waitTime / 2))
-        response = doRequest(APIurl)
-        return response
-    elif response.status_code == 400 or response.status_code == 403 or response.status_code == 404:
-        return None
-    elif response.status_code == 500 or response.status_code == 503:
-        return retryRequest(APIurl, headers)
-    else:
-        print(f"Error: {response.status_code}")
-        print(f"Time4: {time.strftime('%H:%M:%S', time.localtime())}")
-        exit(1)
-
-
-def doRequestTesting(APIurl):
-    headers = {'X-Riot-Token': developerAPIKey}
     response = requests.get(APIurl, headers=headers)
 
     # Tratamiento de errores de respuesta
