@@ -128,9 +128,12 @@ def getPlayerMatches(puuid, existing: bool):
             # simplemente guardarla en la BBDD. En el caso de ser la última, recupera también su fecha de creación para
             # realizar la siguiente búsqueda
             for matchID in result:
-                if database.checkGameDB(matchID) or database.checkGameBlacklist(matchID):
+                if database.checkGameDB(matchID):
                     # if not database.checkMatchTimeline(matchID):
                     #     storeMatchTimeline(matchID)
+                    setSummonerLastGame(puuid, database.getGameDB(matchID))
+                    continue
+                elif database.checkGameBlacklist(matchID):
                     continue
                 else:
                     matchInfo = getMatchInfo(matchID)
@@ -140,10 +143,8 @@ def getPlayerMatches(puuid, existing: bool):
                         continue
                     # if not database.checkMatchTimeline(matchID):
                     #     storeMatchTimeline(matchID)
-                    # Comprobamos la fecha de la primera partida (la última que ha jugado) y la almacenamos como
-                    # información dentro del fichero del jugador
-                    if matchID == result[0]:
-                        setSummonerLastGame(puuid, matchInfo)
+                    # Comprobamos la fecha de la partida y la almacenamos en caso de que sea su última partida
+                    setSummonerLastGame(puuid, matchInfo)
                     participants = database.storeGameDB(matchInfo)
                     for player in participants:
                         if database.checkPlayerDB(player):
@@ -199,7 +200,8 @@ def getSummonerPUUID(summonerName):
 
 def setSummonerLastGame(puuid, matchInfo):
     matchDate = matchInfo['info']['gameCreation']
-    database.setLastGame(puuid, matchDate)
+    if matchDate > database.getLastGame(puuid):
+        database.setLastGame(puuid, matchDate)
 
 
 def getMatchInfo(matchID):
@@ -209,7 +211,7 @@ def getMatchInfo(matchID):
         print(f'No se ha recuperado la partida con id {matchID}')
         database.storeEmptyGameIDDB(matchID)
     elif matchInfo['info']['queueId'] != 400 and matchInfo['info']['queueId'] != 420 and matchInfo['info']['queueId'] != 440:
-        print(f"La partida {matchID} no es Normal o Ranked y no se almacena")
+        print(f"La partida {matchID} no es Normal o Ranked")
         database.storeEmptyGameIDDB(matchID)
         return None
     return matchInfo

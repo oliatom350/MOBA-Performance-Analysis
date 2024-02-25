@@ -13,7 +13,8 @@ def processPlayer(name):
         # getPlayerKDA(name, puuid, matches)
         # getPlayerWinrate(name, puuid, matches)
         # getMeanDuration(name, puuid, matches)
-        definingChampPool(name, puuid, matches)
+        # definingChampPool(name, puuid, matches)
+        getResultsWithPartner(puuid, matches)
 
 
 def getPlayerMatches(name, puuid):
@@ -31,22 +32,30 @@ def getPlayerMatches(name, puuid):
             matches.append(matchInfo)
     elif len(matches) <= nGamesThreshold:
         # Recuperar 'nGamesThreshold - len(matches)' partidas
+        limitTime = database.getLastGame(puuid)
+        endTime = round(time.time())
         while len(matches) != nGamesThreshold:
             # matchesIDs = api.getNormalAndRankedIDs(puuid, 0, round(time.time()), nGamesThreshold - len(matches))
-            matchesIDs = api.getNormalAndRankedIDs(puuid, 0, round(time.time()), 100)
-            if matchesIDs is None:
+            matchesIDs = api.getNormalAndRankedIDs(puuid, limitTime, endTime, 100)
+            if matchesIDs is None or matchesIDs is []:
                 break
             for matchID in matchesIDs:
-                matchInfo = api.getMatchInfo(matchID)
-                if matchInfo['info']['queueId'] != 400 and matchInfo['info']['queueId'] != 420 and matchInfo['info']['queueId'] != 440 or matchInfo is None:
-                    continue
-                else:
-                    matches.append(matchInfo)
+                if not database.checkGameBlacklist(matchID):
+                    matchInfo = api.getMatchInfo(matchID)
+                    if matchInfo is None:
+                        continue
+                    elif matchInfo['info']['queueId'] != 400 and matchInfo['info']['queueId'] != 420 and matchInfo['info']['queueId'] != 440:
+                        continue
+                    else:
+                        matches.append(matchInfo)
+                    try:
+                        endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
+                    except ValueError:
+                        continue
     # TODO Verificar los IDs antes de realizar la búsqueda en la API
     else:
         limitDate = database.getLastGame(puuid)
         endTime = round(time.time())
-        matchInfo = {}
         while True:
             matchesIDs = api.getNormalAndRankedIDs(puuid, limitDate, endTime, 100)
             if matchesIDs is None or matchesIDs is [] or endTime < limitDate:
@@ -503,12 +512,62 @@ def definingChampPool(name, puuid, matches):
     champMasteries = database.getSummonerMasteries(puuid)
     print(champMasteries)
 
+
+def assignPointsForPool(dicChamps, dicTags, champMasteries):
     # TODO Realizar función matemática que asigne unos puntos en base al historial con el campeón, con el tipo del campeón y las maestrías
     #  y seleccione los 4 primeros asumiendo que deben ser 1 champion AD, 1 champion AP y 2 comfort picks
+    # Rangos de intervalos de los criterios
+    champWinrateRange = []
+    tagWinrateRange = []
+    masteryRange = []
+
+    # Puntuación otorgada en cada intervalo
+    champWinratePoints = []
+    tagWinratePoints = []
+    masteryPoints = []
+
+    # Se busca el intervalo concreto
+    # TODO Revisar la búsqueda del índice
+    champWinrateIndex = sum(dicChamps >= threshold for threshold in champWinrateRange)
+    tagWinrateIndex = sum(dicTags >= threshold for threshold in tagWinrateRange)
+    masteryIndex = sum(champMasteries >= threshold for threshold in champMasteries)
+
+    # Se asignan los puntos
+    totalPoints = champWinratePoints[champWinrateIndex] + tagWinratePoints[tagWinrateIndex] + masteryPoints[masteryIndex]
+    # TODO Debería devolver [nombreCampeón, totalPoints]
+    return totalPoints
 
 
-def getResultsWithPartner():
-    pass
+def getResultsWithPartner(puuid, matches):
+    # Estructura de dicPartners = {puuid: nombre, victorias, derrotas}
+    dicPartners = {}
+    for match in matches:
+        gameInfo = getMatchPlayerInfo(puuid, match)
+        teamID = gameInfo['teamId']
+        win = gameInfo['win']
+        for participant in match['info']['participants']:
+            summonerPUUID = participant['puuid']
+            if participant['teamId'] != teamID or summonerPUUID == puuid:
+                continue
+            else:
+                if summonerPUUID in dicPartners:
+                    if win:
+                        dicPartners[summonerPUUID][1] += 1
+                    else:
+                        dicPartners[summonerPUUID][2] += 1
+                else:
+                    if win:
+                        dicPartners[summonerPUUID] = [participant['summonerName'], 1, 0]
+                    else:
+                        dicPartners[summonerPUUID] = [participant['summonerName'], 0, 1]
+
+    nonPartners = []
+    for puuid,partner in dicPartners.items():
+        if partner[1] + partner[2] < 2:
+            nonPartners.append(puuid)
+    for stranger in nonPartners:
+        dicPartners.pop(stranger)
+    print(dicPartners)
 
 
 def getWinrateAgainstChampions():

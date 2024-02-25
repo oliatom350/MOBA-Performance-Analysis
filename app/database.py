@@ -96,6 +96,15 @@ def checkGameDB(matchID):
         return False
 
 
+def getGameDB(matchID):
+    match = dbMatches.find_one({"metadata.matchId": matchID})
+    if match:
+        print(f"Ya existe una partida con matchId: {matchID}.")
+        return match
+    else:
+        return None
+
+
 def checkGameAppDB(matchID):
     match = dbMatches.count_documents({"metadata.matchId": matchID})
     if match:
