@@ -32,11 +32,9 @@ def getPlayerMatches(name, puuid):
             matches.append(matchInfo)
     elif len(matches) <= nGamesThreshold:
         # Recuperar 'nGamesThreshold - len(matches)' partidas
-        limitTime = database.getLastGame(puuid)
-        endTime = round(time.time())
         while len(matches) != nGamesThreshold:
-            # matchesIDs = api.getNormalAndRankedIDs(puuid, 0, round(time.time()), nGamesThreshold - len(matches))
-            matchesIDs = api.getNormalAndRankedIDs(puuid, limitTime, endTime, 100)
+            matchesIDs = api.getNormalAndRankedIDs(puuid, 0, round(time.time()), nGamesThreshold - len(matches))
+            # matchesIDs = api.getNormalAndRankedIDs(puuid, limitTime, endTime, 100)
             if matchesIDs is None or matchesIDs is []:
                 break
             for matchID in matchesIDs:
@@ -48,10 +46,6 @@ def getPlayerMatches(name, puuid):
                         continue
                     else:
                         matches.append(matchInfo)
-                    try:
-                        endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
-                    except ValueError:
-                        continue
     # TODO Verificar los IDs antes de realizar la búsqueda en la API
     else:
         limitDate = database.getLastGame(puuid)
@@ -517,14 +511,14 @@ def assignPointsForPool(dicChamps, dicTags, champMasteries):
     # TODO Realizar función matemática que asigne unos puntos en base al historial con el campeón, con el tipo del campeón y las maestrías
     #  y seleccione los 4 primeros asumiendo que deben ser 1 champion AD, 1 champion AP y 2 comfort picks
     # Rangos de intervalos de los criterios
-    champWinrateRange = []
-    tagWinrateRange = []
-    masteryRange = []
+    champWinrateRange = [0.35, 0.45, 0.55, 0.70]
+    tagWinrateRange = [0.35, 0.45, 0.55, 0.70]
+    masteryRange = [12000, 25000, 40000, 70000]
 
     # Puntuación otorgada en cada intervalo
-    champWinratePoints = []
-    tagWinratePoints = []
-    masteryPoints = []
+    champWinratePoints = [0, 5, 10, 20, 30]
+    tagWinratePoints = [0, 3, 6, 9, 12]
+    masteryPoints = [0, 2, 4, 6, 7]
 
     # Se busca el intervalo concreto
     # TODO Revisar la búsqueda del índice
