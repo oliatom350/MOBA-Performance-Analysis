@@ -193,6 +193,20 @@ def getChampionTags():
     return dicChamps
 
 
+def getChampionByKey(key):
+    champion = dbChampions.find_one({'data.key': str(key)})
+    if champion:
+        return champion['data']['name']
+    return None
+
+
+def getChampionNameById(iD):
+    champion = dbChampions.find_one({'data.id': iD})
+    if champion:
+        return champion['data']['name']
+    return None
+
+
 def getSummonerMasteries(puuid):
     data = dbSummoner.find_one({'puuid': puuid})
     if data:
