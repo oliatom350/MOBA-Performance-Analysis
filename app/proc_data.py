@@ -20,8 +20,9 @@ def processPlayer(name):
         # getPlayerKDA(name, puuid, matches)
         # getPlayerWinrate(name, puuid, matches)
         # getMeanDuration(name, puuid, matches)
-        definingChampPool(name, puuid, matches)
+        # definingChampPool(name, puuid, matches)
         # getResultsWithPartner(puuid, matches)
+        getWinrateAgainstChampions(puuid, matches)
 
 
 def getPlayerMatches(name, puuid):
@@ -533,10 +534,10 @@ def definingChampPool(name, puuid, matches):
             exit(-1)
     print(champMasteries)
 
-    # Seleccionar los 4 primeros asumiendo que deben ser 1 champion AD, 1 champion AP y 2 comfort picks
+    # Seleccionar los 4 primeros asumiendo que deben ser 1 champion AD, 1 champion AP y 1 comfort pick
     champRating = assignPointsForPool(dicChampsSorted, winratesPerTag, champMasteries)
     # Los que sí o sí deben entrar a la selección son los tres primeros, independientemente de cualquier otro criterio
-    selectedChamps = list(champRating.keys())[:3]
+    selectedChamps = list(champRating.keys())[:2]
     AD = AP = 0
     # Comprobamos el tipo de daño de los tres añadidos, lo que puede dar lugar a tres casos
     for champion in selectedChamps:
@@ -548,7 +549,7 @@ def definingChampPool(name, puuid, matches):
         elif info[0] == DamageType.Hybrid:
             AD += 1
             AP += 1
-    # CASO 1: Los tres son tipo mágico
+    # CASO 1: Los dos son de tipo mágico
     if AD == 0:
         # Se debe buscar el primer AD o Hybrid que no esté en selectedChamps
         # En caso de que no exista ninguno más, dejar AD a 0
@@ -560,7 +561,7 @@ def definingChampPool(name, puuid, matches):
                 AD += 1
                 break
         pass
-    # CASO 2: Los tres son de tipo físico
+    # CASO 2: Los dos son de tipo físico
     elif AP == 0:
         # Se debe buscar el primer AP o Hybrid que no esté en selectedChamps
         # En caso de que no exista ninguno más, dejar AP a 0
@@ -571,13 +572,13 @@ def definingChampPool(name, puuid, matches):
                 selectedChamps.append(champ)
                 AP += 1
                 break
-    # CASO 3: Hay al menos un mágico y un físico, o hay un híbrido que se puede usar en ambas categorías, entre los tres seleccionados
+    # CASO 3: Hay un mágico y un físico, o hay al menos un híbrido que se puede usar en ambas categorías, entre los dos seleccionados
     else:
-        # En caso de que sí haya al menos uno de cada, añadimos el cuarto
-        selectedChamps.append(list(champRating.keys())[3])
-    # Además, si no hay un AD o un AP seleccionados (un híbrido vale para cualquiera) entonces añadimos el cuarto
+        # En caso de que sí haya al menos uno de cada, añadimos el tercero
+        selectedChamps.append(list(champRating.keys())[2])
+    # Además, si no hay un AD o un AP seleccionados (un híbrido vale para cualquiera) entonces añadimos el tercero
     if AD == 0 or AP == 0:
-        selectedChamps.append(list(champRating.keys())[3])
+        selectedChamps.append(list(champRating.keys())[2])
 
     i = 0
     for selected in selectedChamps:
@@ -838,8 +839,47 @@ def getResultsWithPartner(puuid, matches):
     print(dicPartners)
 
 
-def getWinrateAgainstChampions():
-    pass
+def getWinrateAgainstChampions(puuid, matches):
+    # El objetivo de esta función es obtener el winrate del jugador contra una serie de campeones concretos.
+    # Esto también se puede interpretar como el winrate de cada campeón contra el jugador
+    # TODO Si se quiere comprobar el winrate en una cola concreta, modificar en el futuro la función al igual que getPlayerWinrate
+    # TODO Además, puede ser interesante guardar en el diccionario un diccionario de los campeones utilizados vs cada campeón y el nº de veces usado
+    # Creamos un diccionario para los campeones
+    vsChamps = {}
+
+    # Recorremos las partidas del diccionario obteniendo la información del jugador en cada una
+    for match in matches:
+        ownInfo = getMatchPlayerInfo(puuid, match)
+        if ownInfo is None:
+            continue
+        # Únicamente nos interesa obtener si el jugador ganó y en qué posición jugó
+        win = ownInfo['win']
+        lane = ownInfo['individualPosition']
+        rivalChamp = None
+        # Recorremos los participantes buscando a su rival de línea
+        for participant in match['info']['participants']:
+            if participant['puuid'] == puuid:
+                continue
+            if participant['individualPosition'] == lane:
+                rivalChamp = database.getChampionNameById(participant['championName'])
+
+        # Procesamos partida en el diccionario de winrate para ese campeón
+        if rivalChamp is None:
+            continue
+        if rivalChamp in vsChamps:
+            if win:
+                vsChamps[rivalChamp]['wins'] += 1
+            else:
+                vsChamps[rivalChamp]['loses'] += 1
+        else:
+            if win:
+                vsChamps[rivalChamp] = {"wins": 1, "loses": 0}
+            else:
+                vsChamps[rivalChamp] = {"wins": 0, "loses": 1}
+
+    for champ, stats in vsChamps.items():
+        winrate = round(stats["wins"]/(stats["wins"] + stats["loses"]) * 100, 2)
+        print(f'{champ}: {stats["wins"]} victorias y {stats["loses"]} derrotas, haciendo un total de {winrate} %')
 
 
 def getWinrateAlongChampions():
