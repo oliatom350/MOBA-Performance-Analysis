@@ -207,6 +207,13 @@ def getChampionNameById(iD):
     return None
 
 
+def getChampionNameByKey(key):
+    champion = dbChampions.find_one({'data.key': key})
+    if champion:
+        return champion['data']['name']
+    return None
+
+
 def getSummonerMasteries(puuid):
     data = dbSummoner.find_one({'puuid': puuid})
     if data:

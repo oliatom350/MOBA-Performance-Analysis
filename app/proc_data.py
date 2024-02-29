@@ -91,7 +91,7 @@ def getMatchesPosition(name, puuid, matches):
         info = getMatchPlayerInfo(puuid, match)
         if info is None:
             continue
-        lane = info['individualPosition']
+        lane = getPlayerPosition(info)
         if queueType == 400:
             totalNorm += 1
             # Tratamiento de Normales
@@ -309,7 +309,7 @@ def getPlayerWinrate(name, puuid, matches):
         if info is None:
             continue
         win = info['win']
-        lane = info['individualPosition']
+        lane = getPlayerPosition(info)
         champName = info['championName']
 
         if win:
@@ -491,6 +491,7 @@ def getGoldDiffs(name, puuid, matchTimeline):
 
 # FUNCIONES ESTADÍSTICAS DESCRIPTIVAS
 def definingChampPool(name, puuid, matches):
+    # TODO Ejecutar con PatoPunky ya que es posible que haya algún problema en la función getChampionNameById
     # El objetivo es definir una champion pool de 4 los campeones recomendados como máximo que mejor rendimiento dan al
     # jugador basándonos en diferentes criterios:
     # - Historial de resultados de cada campeón individual
@@ -777,19 +778,19 @@ def assignPointsForPool(dicChamps, dicTags, champMasteries):
         champRating[champName][1] += getPointsGivenRange(champ['championPoints'], masteryRange, masteryPoints)
 
     for champ, stats in dicChamps.items():
-        winrate = (stats[0]/(stats[0] + stats[1]))
+        winrate = (stats[0] / (stats[0] + stats[1]))
         champRating[champ][1] += getPointsGivenRange(winrate, champWinrateRange, champWinratePoints)
 
         tags = champTags.get(champ)
         totalTagPoints = 0
         for tag in tags:
-            tagWinrate = (dicTags.get(tag)[0]/(dicTags.get(tag)[0] + dicTags.get(tag)[1]))
+            tagWinrate = (dicTags.get(tag)[0] / (dicTags.get(tag)[0] + dicTags.get(tag)[1]))
             totalTagPoints += getPointsGivenRange(tagWinrate, tagWinrateRange, tagWinratePoints)
-        champRating[champ][1] += int(totalTagPoints/len(tags))
+        champRating[champ][1] += int(totalTagPoints / len(tags))
 
-        if stats[0]+stats[1] < 10:
+        if stats[0] + stats[1] < 10:
             champRating[champ][1] = int(champRating[champ][1] * 0.85)
-        elif stats[0]+stats[1] > 35:
+        elif stats[0] + stats[1] > 35:
             champRating[champ][1] = int(champRating[champ][1] * 1.15)
 
     # Una vez acabado el bucle, se debería ordenar el diccionario sobre el total de puntos
@@ -802,7 +803,7 @@ def assignPointsForPool(dicChamps, dicTags, champMasteries):
 def getPointsGivenRange(x, rangeArray, pointsArray):
     # if x > rangeArray[len(rangeArray)-1]:
     #     return pointsArray[len(pointsArray) - 1]
-    for i in range(len(rangeArray)-1, -1, -1):
+    for i in range(len(rangeArray) - 1, -1, -1):
         if rangeArray[i] <= x:
             return pointsArray[i]
 
@@ -842,44 +843,163 @@ def getResultsWithPartner(puuid, matches):
 def getWinrateAgainstChampions(puuid, matches):
     # El objetivo de esta función es obtener el winrate del jugador contra una serie de campeones concretos.
     # Esto también se puede interpretar como el winrate de cada campeón contra el jugador
-    # TODO Si se quiere comprobar el winrate en una cola concreta, modificar en el futuro la función al igual que getPlayerWinrate
-    # TODO Además, puede ser interesante guardar en el diccionario un diccionario de los campeones utilizados vs cada campeón y el nº de veces usado
-    # Creamos un diccionario para los campeones
-    vsChamps = {}
+    # TODO Aplicar dict comprehension o list comprehension a algunos de los bucles
+    # Creamos cinco diccionarios para los campeones, uno por cada posición
+    # La estructura seguida debe ser:
+    # {champName: {"champUsed": {"wins": x, "loses": x}, ...}}
+    # Es decir, cada campeón almacena un diccionario de los resultados concretos del jugador contra él (campeón usado, victorias del campeón usado y derrotas del campeón usado)
+    vsChampsTop = {}
+    vsChampsJgl = {}
+    vsChampsMid = {}
+    vsChampsAdc = {}
+    vsChampsSup = {}
 
     # Recorremos las partidas del diccionario obteniendo la información del jugador en cada una
     for match in matches:
         ownInfo = getMatchPlayerInfo(puuid, match)
         if ownInfo is None:
             continue
-        # Únicamente nos interesa obtener si el jugador ganó y en qué posición jugó
+        # Únicamente nos interesa obtener si el jugador ganó, en qué posición jugó y qué campeón usó
         win = ownInfo['win']
-        lane = ownInfo['individualPosition']
+        lane = getPlayerPosition(ownInfo)
+        ownChamp = database.getChampionByKey(ownInfo['championId'])
+        if ownChamp is None:
+            continue
+
         rivalChamp = None
         # Recorremos los participantes buscando a su rival de línea
         for participant in match['info']['participants']:
-            if participant['puuid'] == puuid:
+            if participant['teamId'] == ownInfo['teamId']:
                 continue
-            if participant['individualPosition'] == lane:
-                rivalChamp = database.getChampionNameById(participant['championName'])
+            enemyPosition = getPlayerPosition(participant)
+            if enemyPosition == lane:
+                rivalChamp = database.getChampionByKey(participant['championId'])
 
         # Procesamos partida en el diccionario de winrate para ese campeón
         if rivalChamp is None:
             continue
-        if rivalChamp in vsChamps:
-            if win:
-                vsChamps[rivalChamp]['wins'] += 1
-            else:
-                vsChamps[rivalChamp]['loses'] += 1
-        else:
-            if win:
-                vsChamps[rivalChamp] = {"wins": 1, "loses": 0}
-            else:
-                vsChamps[rivalChamp] = {"wins": 0, "loses": 1}
 
-    for champ, stats in vsChamps.items():
-        winrate = round(stats["wins"]/(stats["wins"] + stats["loses"]) * 100, 2)
-        print(f'{champ}: {stats["wins"]} victorias y {stats["loses"]} derrotas, haciendo un total de {winrate} %')
+        # Determinamos en qué posición jugó el jugador
+        if lane == "TOP":
+            # Insertamos los resultados en el diccionario correspondiente
+            if rivalChamp not in vsChampsTop:
+                vsChampsTop[rivalChamp] = {}
+            if ownChamp not in vsChampsTop[rivalChamp]:
+                if win:
+                    vsChampsTop[rivalChamp][ownChamp] = {"wins": 1, "loses": 0}
+                else:
+                    vsChampsTop[rivalChamp][ownChamp] = {"wins": 0, "loses": 1}
+            else:
+                if win:
+                    vsChampsTop[rivalChamp][ownChamp]["wins"] += 1
+                else:
+                    vsChampsTop[rivalChamp][ownChamp]["loses"] += 1
+
+        elif lane == "JUNGLE":
+            if rivalChamp not in vsChampsJgl:
+                vsChampsJgl[rivalChamp] = {}
+            if ownChamp not in vsChampsJgl[rivalChamp]:
+                if win:
+                    vsChampsJgl[rivalChamp][ownChamp] = {"wins": 1, "loses": 0}
+                else:
+                    vsChampsJgl[rivalChamp][ownChamp] = {"wins": 0, "loses": 1}
+            else:
+                if win:
+                    vsChampsJgl[rivalChamp][ownChamp]["wins"] += 1
+                else:
+                    vsChampsJgl[rivalChamp][ownChamp]["loses"] += 1
+
+        elif lane == "MIDDLE":
+            if rivalChamp not in vsChampsMid:
+                vsChampsMid[rivalChamp] = {}
+            if ownChamp not in vsChampsMid[rivalChamp]:
+                if win:
+                    vsChampsMid[rivalChamp][ownChamp] = {"wins": 1, "loses": 0}
+                else:
+                    vsChampsMid[rivalChamp][ownChamp] = {"wins": 0, "loses": 1}
+            else:
+                if win:
+                    vsChampsMid[rivalChamp][ownChamp]["wins"] += 1
+                else:
+                    vsChampsMid[rivalChamp][ownChamp]["loses"] += 1
+
+        elif lane == "BOTTOM":
+            if rivalChamp not in vsChampsAdc:
+                vsChampsAdc[rivalChamp] = {}
+            if ownChamp not in vsChampsAdc[rivalChamp]:
+                if win:
+                    vsChampsAdc[rivalChamp][ownChamp] = {"wins": 1, "loses": 0}
+                else:
+                    vsChampsAdc[rivalChamp][ownChamp] = {"wins": 0, "loses": 1}
+            else:
+                if win:
+                    vsChampsAdc[rivalChamp][ownChamp]["wins"] += 1
+                else:
+                    vsChampsAdc[rivalChamp][ownChamp]["loses"] += 1
+
+        elif lane == "UTILITY":
+            if rivalChamp not in vsChampsSup:
+                vsChampsSup[rivalChamp] = {}
+            if ownChamp not in vsChampsSup[rivalChamp]:
+                if win:
+                    vsChampsSup[rivalChamp][ownChamp] = {"wins": 1, "loses": 0}
+                else:
+                    vsChampsSup[rivalChamp][ownChamp] = {"wins": 0, "loses": 1}
+            else:
+                if win:
+                    vsChampsSup[rivalChamp][ownChamp]["wins"] += 1
+                else:
+                    vsChampsSup[rivalChamp][ownChamp]["loses"] += 1
+
+    vsChampsList = [vsChampsTop, vsChampsJgl, vsChampsMid, vsChampsAdc, vsChampsSup]
+    # Se itera sobre cada vsChamps y se ordena por la suma total de partidas jugadas y cada campeón usado por la suma de sus wins + loses
+    for vsChamps in vsChampsList:
+        vsChamps = dict(sorted(vsChamps.items(),
+                               key=lambda x: sum(champion["wins"] + champion["loses"] for champion in x[1].values()),
+                               reverse=True))
+
+        for enemy, champs in vsChamps.items():
+            vsChamps[enemy] = dict(sorted(champs.items(), key=lambda x: x[1]["wins"] + x[1]["loses"], reverse=True))
+
+    vsChamps = {
+        'Top': vsChampsTop,
+        'Jungle': vsChampsJgl,
+        'Mid': vsChampsMid,
+        'Adc': vsChampsAdc,
+        'Support': vsChampsSup
+    }
+    totalCounted = 0
+    for pos, vsChampions in vsChamps.items():
+        print(f'Stats en la posición {pos}:')
+        for enemy, played in vsChampions.items():
+            print(f"\t{enemy}({pos}): ")
+            totalWins = totalLoses = 0
+            for champ, stats in played.items():
+                totalWins += stats["wins"]
+                totalLoses += stats["loses"]
+                winrate = round(stats["wins"] / (stats["wins"] + stats["loses"]) * 100, 2)
+                print(
+                    f'\t\t{champ}: {stats["wins"]} victorias y {stats["loses"]} derrotas, haciendo un total de {winrate} %')
+            totalCounted += totalWins + totalLoses
+            print(
+                f"\tEsto hace un balance de {totalWins} victorias y {totalLoses} derrotas contra {enemy}({pos}), con un rendimiento de {round(totalWins / (totalWins + totalLoses) * 100, 2)} %\n")
+        if pos != 'Support':
+            print("\n")
+    print(f'TOTAL: {totalCounted}')
+
+
+def getPlayerPosition(info):
+    if info is None:
+        return None
+    if info['teamPosition'] == info['individualPosition'] == info['lane']:
+        return info['teamPosition']
+    if info['teamPosition'] == info['lane']:
+        return info['teamPosition']
+    if info['teamPosition'] == info['individualPosition']:
+        return info['teamPosition']
+    if info['lane'] == 'NONE':
+        return info['individualPosition']
+    return info['lane']
 
 
 def getWinrateAlongChampions():
