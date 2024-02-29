@@ -16,13 +16,14 @@ def processPlayer(name):
     puuid = api.getSummonerPUUID(name)
     matches = getPlayerMatches(name, puuid)
     if matches is not None:
+        # TODO Probar de nuevo todas las funciones con los 3 usuarios de siempre e incluso algún otro
         # getMatchesPosition(name, puuid, matches)
         # getPlayerKDA(name, puuid, matches)
-        # getPlayerWinrate(name, puuid, matches)
+        getPlayerWinrate(name, puuid, matches)
         # getMeanDuration(name, puuid, matches)
         # definingChampPool(name, puuid, matches)
         # getResultsWithPartner(puuid, matches)
-        getWinrateAgainstChampions(puuid, matches)
+        # getWinrateAgainstChampions(puuid, matches)
 
 
 def getPlayerMatches(name, puuid):
@@ -213,7 +214,7 @@ def getPlayerKDA(name, puuid, matches):
         kills = info['kills']
         deaths = info['deaths']
         assists = info['assists']
-        champName = info['championName']
+        champName = database.getChampionByKey(info['championId'])
         dicMatches[match['metadata']['matchId']] = [kills, deaths, assists]
 
         # Este fragmento de suma se podría eliminar en el futuro, ya que solo se usa para evitar recorrer de nuevo
@@ -310,7 +311,7 @@ def getPlayerWinrate(name, puuid, matches):
             continue
         win = info['win']
         lane = getPlayerPosition(info)
-        champName = info['championName']
+        champName = database.getChampionByKey(info['championId'])
 
         if win:
             totalVictorias += 1
@@ -491,7 +492,6 @@ def getGoldDiffs(name, puuid, matchTimeline):
 
 # FUNCIONES ESTADÍSTICAS DESCRIPTIVAS
 def definingChampPool(name, puuid, matches):
-    # TODO Ejecutar con PatoPunky ya que es posible que haya algún problema en la función getChampionNameById
     # El objetivo es definir una champion pool de 4 los campeones recomendados como máximo que mejor rendimiento dan al
     # jugador basándonos en diferentes criterios:
     # - Historial de resultados de cada campeón individual
@@ -509,7 +509,7 @@ def definingChampPool(name, puuid, matches):
     # Apartado de resultados por campeón
     winratesPerChampion = [(champ, stats[0] / sum(stats)) for champ, stats in dicChamps.items()]
     winratesPerChampion = sorted(winratesPerChampion, key=lambda x: x[1], reverse=True)
-    dicChampsSorted = {database.getChampionNameById(champ): dicChamps[champ] for champ, _ in winratesPerChampion}
+    dicChampsSorted = {champ: dicChamps[champ] for champ, _ in winratesPerChampion}
     print(dicChampsSorted)
 
     # Apartado de resultados por tipo de campeón
