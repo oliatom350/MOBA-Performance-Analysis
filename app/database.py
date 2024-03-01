@@ -25,7 +25,7 @@ def insertPlayerDB(name, puuid, data):
     else:
         # Ya existe, actualizamos la información
         dbSummoner.update_one({"puuid": puuid}, {"$set": data})
-        print(f"El jugador con nombre {name} ya existe en la base de datos y se ha actualizado su información.")
+        print(f"El jugador con nombre {name} ya existe en la base de datos")
         return False
 
 
