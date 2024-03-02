@@ -15,15 +15,16 @@ class DamageType(Enum):
 def processPlayer(name):
     puuid = api.getSummonerPUUID(name)
     matches = getPlayerMatches(name, puuid)
-    if matches is not None:
+    if matches:
         # TODO Probar de nuevo todas las funciones con los 3 usuarios de siempre e incluso algún otro
         # getMatchesPosition(name, puuid, matches)
         # getPlayerKDA(name, puuid, matches)
-        getPlayerWinrate(name, puuid, matches)
+        # getPlayerWinrate(name, puuid, matches)
         # getMeanDuration(name, puuid, matches)
         # definingChampPool(name, puuid, matches)
         # getResultsWithPartner(puuid, matches)
         # getWinrateAgainstChampions(puuid, matches)
+        getWinrateAlongsideChampions(puuid, matches)
 
 
 def getPlayerMatches(name, puuid):
@@ -31,52 +32,20 @@ def getPlayerMatches(name, puuid):
     if len(matches) == 0:
         # Recuperar las primeras 100 partidas normales y las primeras 100 ranked del jugador
         matchesIDs = api.getNormalAndRankedIDs(puuid, 0, round(time.time()), 100)
-        if matchesIDs is None:
+        if len(matchesIDs) == 0:
             print(f'No se han recuperado partidas del jugador {name}')
             return None
         for matchID in matchesIDs:
+            if matchID in matches.keys():
+                continue
             matchInfo = api.getMatchInfo(matchID)
             if matchInfo is None:
                 continue
-            matches.append(matchInfo)
+            matches[matchID] = matchInfo
     elif len(matches) <= nGamesThreshold:
-        # Recuperar 'nGamesThreshold - len(matches)' partidas
-        while len(matches) != nGamesThreshold:
-            matchesIDs = api.getNormalAndRankedIDs(puuid, 0, round(time.time()), nGamesThreshold - len(matches))
-            # matchesIDs = api.getNormalAndRankedIDs(puuid, limitTime, endTime, 100)
-            if matchesIDs is None or matchesIDs is []:
-                break
-            for matchID in matchesIDs:
-                if not database.checkGameBlacklist(matchID):
-                    matchInfo = api.getMatchInfo(matchID)
-                    if matchInfo is None:
-                        continue
-                    elif matchInfo['info']['queueId'] != 400 and matchInfo['info']['queueId'] != 420 and \
-                            matchInfo['info']['queueId'] != 440:
-                        continue
-                    else:
-                        matches.append(matchInfo)
-    # TODO Verificar los IDs antes de realizar la búsqueda en la API
+        searchActualGamesLimited(matches, puuid)
     else:
-        limitDate = database.getLastGame(puuid)
-        endTime = round(time.time())
-        while True:
-            matchesIDs = api.getNormalAndRankedIDs(puuid, limitDate, endTime, 100)
-            if matchesIDs is None or matchesIDs is [] or endTime < limitDate:
-                break
-            for matchID in matchesIDs:
-                if database.checkGameDB(matchesIDs):
-                    continue
-                matchInfo = api.getMatchInfo(matchID)
-                if matchInfo['info']['queueId'] != 400 and matchInfo['info']['queueId'] != 420 and \
-                        matchInfo['info']['queueId'] != 440 or matchInfo is None:
-                    continue
-                else:
-                    matches.append(matchInfo)
-                try:
-                    endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
-                except ValueError:
-                    continue
+        searchActualGames(matches, puuid)
 
     # Una vez llegados a este punto, deberían haberse recuperado un número mínimo de 100 partidas totales.
     # En el caso de que no sean suficientes, se mostrará un mensaje de que no hay suficientes datos para analizar al jugador
@@ -84,10 +53,58 @@ def getPlayerMatches(name, puuid):
     return matches
 
 
+def searchActualGamesLimited(matches, puuid):
+    # Recuperar 'nGamesThreshold - len(matches)' partidas
+    limitTime = database.getLastGame(puuid)
+    endTime = round(time.time())
+    while len(matches) != nGamesThreshold:
+        # matchesIDs = api.getNormalAndRankedIDs(puuid, 0, round(time.time()), nGamesThreshold - len(matches))
+        matchesIDs = api.getNormalAndRankedIDs(puuid, limitTime, endTime, nGamesThreshold - len(matches))
+        if len(matchesIDs) == 0 or endTime < limitTime:
+            break
+        for matchID in matchesIDs:
+            if database.checkGameBlacklist(matchID) or matchID in matches.keys():
+                continue
+            matchInfo = api.getMatchInfo(matchID)
+            if matchInfo['info']['queueId'] != 400 and matchInfo['info']['queueId'] != 420 and \
+                    matchInfo['info']['queueId'] != 440 or matchInfo is None:
+                continue
+            else:
+                matches[matchID] = matchInfo
+            try:
+                endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
+            except ValueError as e:
+                print(e)
+                continue
+
+
+def searchActualGames(matches, puuid):
+    limitDate = database.getLastGame(puuid)
+    endTime = round(time.time())
+    while True:
+        matchesIDs = api.getNormalAndRankedIDs(puuid, limitDate, endTime, 100)
+        if len(matchesIDs) == 0 or endTime < limitDate:
+            break
+        for matchID in matchesIDs:
+            if database.checkGameDB(matchesIDs) or matchID in matches.keys():
+                continue
+            matchInfo = api.getMatchInfo(matchID)
+            if matchInfo['info']['queueId'] != 400 and matchInfo['info']['queueId'] != 420 and \
+                    matchInfo['info']['queueId'] != 440 or matchInfo is None:
+                continue
+            else:
+                matches[matchID] = matchInfo
+            try:
+                endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
+            except ValueError as e:
+                print(e)
+                continue
+
+
 def getMatchesPosition(name, puuid, matches):
     topNorm = jungleNorm = midNorm = adcNorm = suppNorm = topSolo = jungleSolo = midSolo = adcSolo = suppSolo = topFlex \
         = jungleFlex = midFlex = adcFlex = suppFlex = unknown = totalNorm = totalSolo = totalFlex = unknownQueue = 0
-    for match in matches:
+    for match in matches.values():
         queueType = match['info']['queueId']
         info = getMatchPlayerInfo(puuid, match)
         if info is None:
@@ -204,7 +221,7 @@ def getPlayerKDA(name, puuid, matches):
     dicMatches = {}
     totalGames = len(matches)
 
-    for match in matches:
+    for match in matches.values():
         queueType = match['info']['queueId']
         info = getMatchPlayerInfo(puuid, match)
         if info is None:
@@ -215,7 +232,10 @@ def getPlayerKDA(name, puuid, matches):
         deaths = info['deaths']
         assists = info['assists']
         champName = database.getChampionByKey(info['championId'])
-        dicMatches[match['metadata']['matchId']] = [kills, deaths, assists]
+        if match['metadata']['matchId'] not in dicMatches:
+            dicMatches[match['metadata']['matchId']] = [kills, deaths, assists]
+        else:
+            pass
 
         # Este fragmento de suma se podría eliminar en el futuro, ya que solo se usa para evitar recorrer de nuevo
         # dicMatches sumando cada estadística al total. dicMatches se puede usar para enviar o devolver la info por partida
@@ -304,7 +324,7 @@ def getPlayerWinrate(name, puuid, matches):
     # Creamos un diccionario para los campeones
     dicChamps = {}
 
-    for match in matches:
+    for match in matches.values():
         queueType = match['info']['queueId']
         info = getMatchPlayerInfo(puuid, match)
         if info is None:
@@ -459,7 +479,7 @@ def getMeanDuration(name, puuid, matches):
     # El objetivo de esta función es obtener la duración media de las partidas del jugador. Se puede ampliar a duración
     # media por cola, duración media por campeón y duración media por posición.
     rendiciones = remakes = duracionTotal = countMatches = 0
-    for match in matches:
+    for match in matches.values():
         queueType = match['info']['queueId']
         duracion = match['info']['gameDuration']
         info = getMatchPlayerInfo(puuid, match)
@@ -492,7 +512,8 @@ def getGoldDiffs(name, puuid, matchTimeline):
 
 # FUNCIONES ESTADÍSTICAS DESCRIPTIVAS
 def definingChampPool(name, puuid, matches):
-    # El objetivo es definir una champion pool de 4 los campeones recomendados como máximo que mejor rendimiento dan al
+    # TODO Posible mejora: Obtener los campeones clasificados en base a la posición
+    # El objetivo es definir una champion pool de 3 los campeones recomendados como máximo que mejor rendimiento dan al
     # jugador basándonos en diferentes criterios:
     # - Historial de resultados de cada campeón individual
     # - Historial de resultados de un tipo de campeón (fighter, tank, etc.)
@@ -811,7 +832,7 @@ def getPointsGivenRange(x, rangeArray, pointsArray):
 def getResultsWithPartner(puuid, matches):
     # Estructura de dicPartners = {puuid: nombre, victorias, derrotas}
     dicPartners = {}
-    for match in matches:
+    for match in matches.values():
         gameInfo = getMatchPlayerInfo(puuid, match)
         teamID = gameInfo['teamId']
         win = gameInfo['win']
@@ -831,13 +852,15 @@ def getResultsWithPartner(puuid, matches):
                     else:
                         dicPartners[summonerPUUID] = [participant['summonerName'], 0, 1]
 
-    nonPartners = []
-    for puuid, partner in dicPartners.items():
-        if partner[1] + partner[2] < 2:
-            nonPartners.append(puuid)
+    # nonPartners = []
+    nonPartners = [puuid for puuid, partner in dicPartners.items() if partner[1] + partner[2] < 3]
+    # for puuid, partner in dicPartners.items():
+    #     if partner[1] + partner[2] < 3:
+    #         nonPartners.append(puuid)
     for stranger in nonPartners:
         dicPartners.pop(stranger)
-    print(dicPartners)
+    for companion in dicPartners.values():
+        print(f'{companion[0]}: {companion[1]} victorias y {companion[2]} derrotas, haciendo un winrate de {round((companion[1]/(companion[1] + companion[2])) * 100, 2)}%')
 
 
 def getWinrateAgainstChampions(puuid, matches):
@@ -854,10 +877,14 @@ def getWinrateAgainstChampions(puuid, matches):
     vsChampsAdc = {}
     vsChampsSup = {}
 
+    remakes = 0
     # Recorremos las partidas del diccionario obteniendo la información del jugador en cada una
-    for match in matches:
+    for match in matches.values():
         ownInfo = getMatchPlayerInfo(puuid, match)
         if ownInfo is None:
+            continue
+        if ownInfo['gameEndedInEarlySurrender']:
+            remakes += 1
             continue
         # Únicamente nos interesa obtener si el jugador ganó, en qué posición jugó y qué campeón usó
         win = ownInfo['win']
@@ -985,7 +1012,9 @@ def getWinrateAgainstChampions(puuid, matches):
                 f"\tEsto hace un balance de {totalWins} victorias y {totalLoses} derrotas contra {enemy}({pos}), con un rendimiento de {round(totalWins / (totalWins + totalLoses) * 100, 2)} %\n")
         if pos != 'Support':
             print("\n")
-    print(f'TOTAL: {totalCounted}')
+    print(f'TOTAL ANALIZADAS: {totalCounted}')
+    # TODO Los remakes no se analizan puesto que sus datos son alterados y dan lugar a incoherencias
+    print(f'TOTAL REMAKES: {remakes}')
 
 
 def getPlayerPosition(info):
@@ -995,6 +1024,8 @@ def getPlayerPosition(info):
         return info['teamPosition']
     if info['teamPosition'] == info['lane']:
         return info['teamPosition']
+    # if info['teamPosition'] == 'BOTTOM' and info['individualPosition'] == 'BOTTOM' and info['role'] == 'SUPPORT':
+    #     return 'UTILITY'
     if info['teamPosition'] == info['individualPosition']:
         return info['teamPosition']
     if info['lane'] == 'NONE':
@@ -1002,8 +1033,75 @@ def getPlayerPosition(info):
     return info['lane']
 
 
-def getWinrateAlongChampions():
-    pass
+def getWinrateAlongsideChampions(puuid, matches):
+    # El objetivo de esta función es obtener el winrate del jugador contra una serie de campeones concretos.
+    # Esto también se puede interpretar como el winrate de cada campeón contra el jugador
+    # TODO Aplicar dict comprehension o list comprehension a algunos de los bucles
+    # Creamos cinco diccionarios para los campeones, uno por cada posición
+    # La estructura seguida debe ser:
+    # {champName: {"champUsed": {"wins": x, "loses": x}, ...}}
+    # Es decir, cada campeón almacena un diccionario de los resultados concretos del jugador contra él (campeón usado, victorias del campeón usado y derrotas del campeón usado)
+    withChamps = {}
+    remakes = 0
+
+    # Recorremos las partidas del diccionario obteniendo la información del jugador en cada una
+    for match in matches.values():
+        ownInfo = getMatchPlayerInfo(puuid, match)
+        if ownInfo is None:
+            continue
+        if ownInfo['gameEndedInEarlySurrender']:
+            remakes += 1
+            continue
+        # Únicamente nos interesa obtener si el jugador ganó, en qué posición jugó, qué campeón utilizó y en qué equipo jugó
+        win = ownInfo['win']
+        ownPos = getPlayerPosition(ownInfo)
+        ownChamp = database.getChampionByKey(ownInfo['championId'])
+        ownTeam = ownInfo['teamId']
+
+        # Recorremos los participantes buscando a sus compañeros de equipo
+        for participant in match['info']['participants']:
+            if participant['teamId'] != ownTeam or participant['puuid'] == puuid:
+                continue
+            partnerPosition = getPlayerPosition(participant)
+            partnerChamp = database.getChampionByKey(participant['championId'])
+            # Procesamos partida en el diccionario de winrate para ese campeón
+            if partnerChamp is None:
+                continue
+            # Almacenamos la información en función de lo jugador por el jugador y su compañero analizado
+            # Insertamos los resultados en el diccionario correspondiente
+            if ownChamp not in withChamps:
+                withChamps[ownChamp] = {}
+            if partnerChamp not in withChamps[ownChamp]:
+                withChamps[ownChamp][partnerChamp] = {}
+            if partnerPosition not in withChamps[ownChamp][partnerChamp]:
+                if win:
+                    withChamps[ownChamp][partnerChamp][partnerPosition] = {"wins": 1, "loses": 0}
+                else:
+                    withChamps[ownChamp][partnerChamp][partnerPosition] = {"wins": 0, "loses": 1}
+            else:
+                if win:
+                    withChamps[ownChamp][partnerChamp][partnerPosition]["wins"] += 1
+                else:
+                    withChamps[ownChamp][partnerChamp][partnerPosition]["loses"] += 1
+
+    totalCounted = 0
+    print(f'Se imprimen los campeones compañeros en todas las posiciones independientemente de dónde se jugara el campeón')
+    for playerChampion, partners in withChamps.items():
+        print(f'Stats para el campeón {playerChampion}:')
+        totalWins = totalLoses = 0
+        for partner, positions in withChamps[playerChampion].items():
+            totalWins = totalLoses = 0
+            for pos, stats in withChamps[playerChampion][partner].items():
+                totalWins += stats["wins"]
+                totalLoses += stats["loses"]
+                winrate = round(stats["wins"] / (stats["wins"] + stats["loses"]) * 100, 2)
+                print(f'\t{partner}({pos}): {stats["wins"]} victorias y {stats["loses"]} derrotas, haciendo un total de {winrate} %')
+            print(
+                f"\tEsto hace un balance de {totalWins} victorias y {totalLoses} derrotas con {partner} en todas sus posiciones, con un rendimiento de {round(totalWins / (totalWins + totalLoses) * 100, 2)} %\n")
+            totalCounted += totalWins + totalLoses
+        print("\n")
+    print(f'TOTAL ANALIZADAS: {totalCounted}')
+    print(f'TOTAL REMAKES: {remakes}')
 # FUNCIONES GRÁFICAS TEMPORALES
 
 

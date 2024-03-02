@@ -144,7 +144,12 @@ def checkPlayerDB(player):
 
 
 def getAllPlayersGames(puuid):
-    return list(dbMatches.find({'metadata.participants': puuid}))
+    matchList = list(dbMatches.find({'metadata.participants': puuid}))
+    matchDict = {}
+    for match in matchList:
+        matchID = match['metadata']['matchId']
+        matchDict[matchID] = match
+    return matchDict
 
 
 def checkMatchTimeline(matchID):

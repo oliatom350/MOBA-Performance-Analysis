@@ -106,6 +106,7 @@ def getMatches(puuid):
     print('Ya no hay más jugadores nuevos que procesar')
 
 
+# TODO Esta función es la que se debería usar para la función de actualización de un jugador
 def getPlayerMatches(puuid, existing: bool):
     # Primero, obtenemos 100 IDs de las partidas en las que ha participado el jugador puuid_actual (ya que count
     # puede ser 100 como máximo) utilizando la primera de las APIs. Si el resultado es vacío, pasar
@@ -177,7 +178,7 @@ def getNormalAndRankedIDs(puuid, limitDate, endTime, count):
     elif result is not None and resultRanked is None:
         return result
     elif result is None and resultRanked is None:
-        return None
+        return []
     result = result + resultRanked
     return result
 
