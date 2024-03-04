@@ -23,8 +23,8 @@ def processPlayer(name):
         # getMeanDuration(name, puuid, matches)
         # definingChampPool(name, puuid, matches)
         # getResultsWithPartner(puuid, matches)
-        # getWinrateAgainstChampions(puuid, matches)
-        getWinrateAlongsideChampions(puuid, matches)
+        getWinrateAgainstChampions(puuid, matches)
+        # getWinrateAlongsideChampions(puuid, matches)
 
 
 def getPlayerMatches(name, puuid):
@@ -852,11 +852,7 @@ def getResultsWithPartner(puuid, matches):
                     else:
                         dicPartners[summonerPUUID] = [participant['summonerName'], 0, 1]
 
-    # nonPartners = []
     nonPartners = [puuid for puuid, partner in dicPartners.items() if partner[1] + partner[2] < 3]
-    # for puuid, partner in dicPartners.items():
-    #     if partner[1] + partner[2] < 3:
-    #         nonPartners.append(puuid)
     for stranger in nonPartners:
         dicPartners.pop(stranger)
     for companion in dicPartners.values():
@@ -1036,7 +1032,6 @@ def getPlayerPosition(info):
 def getWinrateAlongsideChampions(puuid, matches):
     # El objetivo de esta función es obtener el winrate del jugador contra una serie de campeones concretos.
     # Esto también se puede interpretar como el winrate de cada campeón contra el jugador
-    # TODO Aplicar dict comprehension o list comprehension a algunos de los bucles
     # Creamos cinco diccionarios para los campeones, uno por cada posición
     # La estructura seguida debe ser:
     # {champName: {"champUsed": {"wins": x, "loses": x}, ...}}
@@ -1084,11 +1079,9 @@ def getWinrateAlongsideChampions(puuid, matches):
                 else:
                     withChamps[ownChamp][partnerChamp][partnerPosition]["loses"] += 1
 
-    totalCounted = 0
     print(f'Se imprimen los campeones compañeros en todas las posiciones independientemente de dónde se jugara el campeón')
     for playerChampion, partners in withChamps.items():
         print(f'Stats para el campeón {playerChampion}:')
-        totalWins = totalLoses = 0
         for partner, positions in withChamps[playerChampion].items():
             totalWins = totalLoses = 0
             for pos, stats in withChamps[playerChampion][partner].items():
@@ -1098,10 +1091,13 @@ def getWinrateAlongsideChampions(puuid, matches):
                 print(f'\t{partner}({pos}): {stats["wins"]} victorias y {stats["loses"]} derrotas, haciendo un total de {winrate} %')
             print(
                 f"\tEsto hace un balance de {totalWins} victorias y {totalLoses} derrotas con {partner} en todas sus posiciones, con un rendimiento de {round(totalWins / (totalWins + totalLoses) * 100, 2)} %\n")
-            totalCounted += totalWins + totalLoses
         print("\n")
-    print(f'TOTAL ANALIZADAS: {totalCounted}')
+    print(f'TOTAL ANALIZADAS: {len(matches)-remakes}')
     print(f'TOTAL REMAKES: {remakes}')
+
+
+def getQuickDataForPosition():
+    pass
 # FUNCIONES GRÁFICAS TEMPORALES
 
 
