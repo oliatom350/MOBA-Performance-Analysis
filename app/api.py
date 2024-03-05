@@ -97,17 +97,16 @@ def getMatches(puuid):
             continue
         newPlayers = []
         if newSummoner:
-            newPlayers = getPlayerMatches(puuidActual, False)
+            newPlayers = storePlayerMatches(puuidActual, False)
         else:
-            newPlayers = getPlayerMatches(puuidActual, True)
+            newPlayers = storePlayerMatches(puuidActual, True)
         for player in newPlayers:
             puuidQueue.put(player)
-
     print('Ya no hay más jugadores nuevos que procesar')
 
 
 # TODO Esta función es la que se debería usar para la función de actualización de un jugador
-def getPlayerMatches(puuid, existing: bool):
+def storePlayerMatches(puuid, existing: bool):
     # Primero, obtenemos 100 IDs de las partidas en las que ha participado el jugador puuid_actual (ya que count
     # puede ser 100 como máximo) utilizando la primera de las APIs. Si el resultado es vacío, pasar
     # al siguiente jugador directamente.
@@ -183,6 +182,25 @@ def getNormalAndRankedIDs(puuid, limitDate, endTime, count):
     return result
 
 
+def getRankedGames(puuid, limitDate, endTime, count):
+    matchesIDs = getIDMatches(puuid, QueueType.Ranked, limitDate, endTime, count)
+    if len(matchesIDs) == 0 or matchesIDs is None:
+        return {}
+    dicMatches = {}
+    while len(dicMatches) < count:
+        for matchId in matchesIDs:
+            if database.checkGameBlacklist(matchId):
+                continue
+            if database.checkGameDB(matchId):
+                info = database.getGameDB(matchId)
+            else:
+                info = getMatchInfo(matchId)
+            if info is None:
+                continue
+            dicMatches[matchId] = info
+    return dicMatches
+
+
 def getSummonerName(puuidActual):
     summonerPUUIDAPI = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuidActual}'
     data = doRequest(summonerPUUIDAPI)
@@ -194,6 +212,14 @@ def getSummonerName(puuidActual):
 def getSummonerPUUID(summonerName):
     summonerNameAPI = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summonerName}'
     data = doRequest(summonerNameAPI)
+    if data is None:
+        return None
+    return data["puuid"]
+
+
+def getSummonerPUUIDbySummonerId(summonerId):
+    summonerIdAPI = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/{summonerId}'
+    data = doRequest(summonerIdAPI)
     if data is None:
         return None
     return data["puuid"]
@@ -224,6 +250,15 @@ def storeMatchTimeline(matchID):
     if timeline is None:
         print(f'No se ha recuperado la timeline de la partida con id {matchID}')
     database.storeGameTimelineDB(timeline)
+
+
+def getProPlayers():
+    proPlayerAPI = f'https://euw1.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5'
+    data = doRequest(proPlayerAPI)
+    if data is None:
+        print(f'No se ha recuperado la lista de los proplayers')
+        exit(-1)
+    return data['entries']
 
 
 def doRequest(APIurl):

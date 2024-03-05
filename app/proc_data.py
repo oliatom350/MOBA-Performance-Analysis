@@ -1,9 +1,7 @@
 import time
 from enum import Enum
-
+import re
 from app import api, database
-
-nGamesThreshold = 100
 
 
 class DamageType(Enum):
@@ -14,91 +12,82 @@ class DamageType(Enum):
 
 def processPlayer(name):
     puuid = api.getSummonerPUUID(name)
-    matches = getPlayerMatches(name, puuid)
+    matches = getAllPlayerMatches(name, puuid)
     if matches:
-        # TODO Probar de nuevo todas las funciones con los 3 usuarios de siempre e incluso algún otro
         # getMatchesPosition(name, puuid, matches)
         # getPlayerKDA(name, puuid, matches)
         # getPlayerWinrate(name, puuid, matches)
         # getMeanDuration(name, puuid, matches)
         # definingChampPool(name, puuid, matches)
         # getResultsWithPartner(puuid, matches)
-        getWinrateAgainstChampions(puuid, matches)
-        # getWinrateAlongsideChampions(puuid, matches)
+        # getWinrateAgainstChampions(puuid, matches)
+        getWinrateAlongsideChampions(puuid, matches)
+        # getQuickPlayerInfo(name, puuid, matches)
 
 
-def getPlayerMatches(name, puuid):
-    matches = database.getAllPlayersGames(puuid)
-    if len(matches) == 0:
-        # Recuperar las primeras 100 partidas normales y las primeras 100 ranked del jugador
-        matchesIDs = api.getNormalAndRankedIDs(puuid, 0, round(time.time()), 100)
-        if len(matchesIDs) == 0:
-            print(f'No se han recuperado partidas del jugador {name}')
-            return None
+def getQuickPlayerInfo(name, puuid, matches):
+    mostPlayedPosition = getMostPlayedPosition(name, puuid, matches)
+    # TODO
+    #  - Función de daño a objetivos y/o torretas promedio de las 10 últimas partidas jugadas
+    #  - Función que calcule los pingeos promedios y los compare con el del jugador
+    #  - Función que compruebe si se lleva la primera kill con frecuencia
+    #  - Función que compruebe si recibe más daño del que inflige
+    #  - Función que compruebe si ha hecho alguna pentakill o alguna quadrakill recientemente
+    #  - Función que compruebe si ha robado objetivos recientemente
+    #  - Función que obtenga la visión por minuto y valore el resultado
+    dmgToObjectivesTurrets(name, puuid, matches, mostPlayedPosition)
+    pass
+
+
+def updatePlayerGames(name, puuid, count):
+    if not database.checkPlayerDB(puuid):
+        limitDate = database.getLastGame(puuid)
+    else:
+        api.registerSummoner(name)
+        limitDate = 0
+    endTime = round(time.time())
+    matches = {}
+    while True:
+        matchesIDs = api.getNormalAndRankedIDs(puuid, limitDate, endTime, count)
+        if len(matchesIDs) == 0 or endTime < limitDate:
+            break
+        matchesRepeated = []
         for matchID in matchesIDs:
-            if matchID in matches.keys():
+            if database.checkGameDB(matchID) or database.checkGameBlacklist(matchID):
+                matchesRepeated.append(matchID)
                 continue
             matchInfo = api.getMatchInfo(matchID)
             if matchInfo is None:
+                matchesRepeated.append(matchID)
                 continue
-            matches[matchID] = matchInfo
-    elif len(matches) <= nGamesThreshold:
-        searchActualGamesLimited(matches, puuid)
-    else:
-        searchActualGames(matches, puuid)
+            else:
+                database.storeGameDB(matchInfo)
+                matches[matchID] = matchInfo
+            try:
+                endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
+            except ValueError as e:
+                print(e)
+                continue
+        if len(matchesRepeated) == len(matchesIDs):
+            break
+    print(f'Se han actualizado {len(matches)} partidas de {name}')
+    return matches
 
+
+def getAllPlayerMatches(name, puuid):
+    matches = database.getAllPlayersGames(puuid)
+    if 0 < len(matches) <= 100:
+        matches2 = updatePlayerGames(name, puuid, 100-len(matches))
+    else:
+        matches2 = updatePlayerGames(name, puuid, 100)
+    for matchID, matchInfo in matches2:
+        if matchID in matches.keys():
+            continue
+        matches[matchID] = matchInfo
     # Una vez llegados a este punto, deberían haberse recuperado un número mínimo de 100 partidas totales.
     # En el caso de que no sean suficientes, se mostrará un mensaje de que no hay suficientes datos para analizar al jugador
     print(f'Se han recuperado {len(matches)} partidas de {name}')
     return matches
-
-
-def searchActualGamesLimited(matches, puuid):
-    # Recuperar 'nGamesThreshold - len(matches)' partidas
-    limitTime = database.getLastGame(puuid)
-    endTime = round(time.time())
-    while len(matches) != nGamesThreshold:
-        # matchesIDs = api.getNormalAndRankedIDs(puuid, 0, round(time.time()), nGamesThreshold - len(matches))
-        matchesIDs = api.getNormalAndRankedIDs(puuid, limitTime, endTime, nGamesThreshold - len(matches))
-        if len(matchesIDs) == 0 or endTime < limitTime:
-            break
-        for matchID in matchesIDs:
-            if database.checkGameBlacklist(matchID) or matchID in matches.keys():
-                continue
-            matchInfo = api.getMatchInfo(matchID)
-            if matchInfo['info']['queueId'] != 400 and matchInfo['info']['queueId'] != 420 and \
-                    matchInfo['info']['queueId'] != 440 or matchInfo is None:
-                continue
-            else:
-                matches[matchID] = matchInfo
-            try:
-                endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
-            except ValueError as e:
-                print(e)
-                continue
-
-
-def searchActualGames(matches, puuid):
-    limitDate = database.getLastGame(puuid)
-    endTime = round(time.time())
-    while True:
-        matchesIDs = api.getNormalAndRankedIDs(puuid, limitDate, endTime, 100)
-        if len(matchesIDs) == 0 or endTime < limitDate:
-            break
-        for matchID in matchesIDs:
-            if database.checkGameDB(matchesIDs) or matchID in matches.keys():
-                continue
-            matchInfo = api.getMatchInfo(matchID)
-            if matchInfo['info']['queueId'] != 400 and matchInfo['info']['queueId'] != 420 and \
-                    matchInfo['info']['queueId'] != 440 or matchInfo is None:
-                continue
-            else:
-                matches[matchID] = matchInfo
-            try:
-                endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
-            except ValueError as e:
-                print(e)
-                continue
 
 
 def getMatchesPosition(name, puuid, matches):
@@ -186,6 +175,16 @@ def getMatchesPosition(name, puuid, matches):
         f"Support: {suppNorm + suppSolo + suppFlex} veces ({perSupp} %)\n"
         f"Línea desconocida: {unknown} veces ({perUnknownPosition} %)\n"
     )
+
+    dicPos = {
+        'TOP': {'Normal': topNorm, 'SoloDuo': topSolo, 'Flex': topFlex},
+        'JUNGLE': {'Normal': jungleNorm, 'SoloDuo': jungleSolo, 'Flex': jungleFlex},
+        'MIDDLE': {'Normal': midNorm, 'SoloDuo': midSolo, 'Flex': midFlex},
+        'BOTTOM': {'Normal': adcNorm, 'SoloDuo': adcSolo, 'Flex': adcFlex},
+        'UTILITY': {'Normal': suppNorm, 'SoloDuo': suppSolo, 'Flex': suppFlex}
+    }
+
+    return dicPos
 
 
 def getMatchPlayerInfo(puuid, match):
@@ -1096,8 +1095,65 @@ def getWinrateAlongsideChampions(puuid, matches):
     print(f'TOTAL REMAKES: {remakes}')
 
 
-def getQuickDataForPosition():
-    pass
+def getSeasonAndPatch(match):
+    version = match['info']['gameVersion']
+    regex = r'^(\d+)\.(\d+)\.'
+    matchResult = re.match(regex, version)
+    if matchResult:
+        return {'Season': matchResult.group(1),
+                'Version': matchResult.group(2)}
+    else:
+        return None
+
+
+def dmgToObjectivesTurrets(name, puuid, matches, position):
+    # TODO Habría que valorar estos datos en función de la posición, ya que:
+    #  TOP: ++Daño a torres = ++Daño a estructuras > +Daño a objetivos
+    #  JUNGLA: ++Daño a objetivos > +Daño a torres = +Daño a estructuras
+    #  MID & ADC: +Daño a torres = +Daño a estructuras = +Daño a objetivos
+    #  SUPPORT: +Daño a objetivos > -Daño a torres = -Daño a estructuras
+
+    i = 0
+    dicDamage = {}
+    while i < 10:
+        for matchID, matchData in matches.items():
+            info = getMatchPlayerInfo(puuid, matchData)
+            dicDamage[matchID] = {'damageDealtToBuildings': info['damageDealtToBuildings'],
+                                  'damageDealtToObjectives': info['damageDealtToObjectives'],
+                                  'damageDealtToTurrets': info['damageDealtToTurrets']}
+
+
+def getMostPlayedPosition(name, puuid, matches):
+    # Obtenemos la posición más jugada
+    dicPos = getMatchesPosition(name, puuid, matches)
+    pos = None
+    aux = 1
+    while pos is None:
+        for role, modes in dicPos.items():
+            total_sum = sum(modes.values())
+            other_sum = sum(sum(dicPos[other_role].values()) for other_role in dicPos if other_role != role)
+            if total_sum > other_sum * aux:
+                pos = role
+                break
+        aux *= 0.75
+    return pos
+
+
+def getProPlayersHistory():
+    # Recuperamos la lista de los mejores proPlayers
+    proPlayers = api.getProPlayers()
+    for pro in proPlayers:
+        proPUUID = api.getSummonerPUUIDbySummonerId(pro['summonerId'])
+        proName = pro['summonerName']
+        proMatches = {}
+        # Si el proPlayer existe en nuestra BBDD, entonces recuperamos sus partidas y las analizamos para obtener los datos de referencia
+        if database.checkPlayerDB(proPUUID):
+            proMatches = database.getAllPlayersGames(proPUUID)
+        # Si no existe, entonces pedimos las primeras 20 partidas de tipo Ranked a la API y obtenemos sus datos de referencia
+        else:
+            proMatches = api.getRankedGames(proPUUID, 0, time.time(), 20)
+        # TODO Obtener info de referencia una vez obtenidos todos los proMatches
+
 # FUNCIONES GRÁFICAS TEMPORALES
 
 
