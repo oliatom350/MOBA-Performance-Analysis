@@ -138,9 +138,9 @@ def checkGameBlacklist(matchID):
 def checkPlayerDB(player):
     existing_player = dbSummoner.find_one({"puuid": player})
     if existing_player:
-        # Devuelve False si no existe el jugador en la BBDD, True en caso contrario
-        return False
-    return True
+        # Devuelve True si no existe el jugador en la BBDD, False en caso contrario
+        return True
+    return False
 
 
 def getAllPlayersGames(puuid):

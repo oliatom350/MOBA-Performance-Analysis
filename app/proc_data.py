@@ -21,8 +21,8 @@ def processPlayer(name):
         # definingChampPool(name, puuid, matches)
         # getResultsWithPartner(puuid, matches)
         # getWinrateAgainstChampions(puuid, matches)
-        getWinrateAlongsideChampions(puuid, matches)
-        # getQuickPlayerInfo(name, puuid, matches)
+        # getWinrateAlongsideChampions(puuid, matches)
+        getQuickPlayerInfo(name, puuid, matches)
 
 
 def getQuickPlayerInfo(name, puuid, matches):
@@ -35,12 +35,13 @@ def getQuickPlayerInfo(name, puuid, matches):
     #  - Función que compruebe si ha hecho alguna pentakill o alguna quadrakill recientemente
     #  - Función que compruebe si ha robado objetivos recientemente
     #  - Función que obtenga la visión por minuto y valore el resultado
-    dmgToObjectivesTurrets(name, puuid, matches, mostPlayedPosition)
+    getProPlayersHistory()
+    # dmgToObjectivesTurrets(name, puuid, matches, mostPlayedPosition)
     pass
 
 
 def updatePlayerGames(name, puuid, count):
-    if not database.checkPlayerDB(puuid):
+    if database.checkPlayerDB(puuid):
         limitDate = database.getLastGame(puuid)
     else:
         api.registerSummoner(name)
@@ -1142,18 +1143,22 @@ def getMostPlayedPosition(name, puuid, matches):
 def getProPlayersHistory():
     # Recuperamos la lista de los mejores proPlayers
     proPlayers = api.getProPlayers()
+    count = 0
     for pro in proPlayers:
         proPUUID = api.getSummonerPUUIDbySummonerId(pro['summonerId'])
         proName = pro['summonerName']
         proMatches = {}
+        print(f'Procesando al jugador {proName}')
         # Si el proPlayer existe en nuestra BBDD, entonces recuperamos sus partidas y las analizamos para obtener los datos de referencia
         if database.checkPlayerDB(proPUUID):
             proMatches = database.getAllPlayersGames(proPUUID)
+            count += 1
         # Si no existe, entonces pedimos las primeras 20 partidas de tipo Ranked a la API y obtenemos sus datos de referencia
         else:
             proMatches = api.getRankedGames(proPUUID, 0, time.time(), 20)
+            count += 1
         # TODO Obtener info de referencia una vez obtenidos todos los proMatches
-
+    print(f'Se han obtenido las partidas de los {count} proPlayers')
 # FUNCIONES GRÁFICAS TEMPORALES
 
 

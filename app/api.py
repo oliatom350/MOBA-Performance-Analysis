@@ -147,7 +147,7 @@ def storePlayerMatches(puuid, existing: bool):
                     setSummonerLastGame(puuid, matchInfo)
                     participants = database.storeGameDB(matchInfo)
                     for player in participants:
-                        if database.checkPlayerDB(player):
+                        if not database.checkPlayerDB(player):
                             newPlayers.append(player)
                 try:
                     endTime = int(str(matchInfo['info']['gameCreation'])[:-3])
@@ -184,7 +184,7 @@ def getNormalAndRankedIDs(puuid, limitDate, endTime, count):
 
 def getRankedGames(puuid, limitDate, endTime, count):
     matchesIDs = getIDMatches(puuid, QueueType.Ranked, limitDate, endTime, count)
-    if len(matchesIDs) == 0 or matchesIDs is None:
+    if matchesIDs is None or len(matchesIDs) == 0:
         return {}
     dicMatches = {}
     while len(dicMatches) < count:
