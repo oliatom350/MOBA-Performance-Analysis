@@ -25,6 +25,7 @@ def registerSummoner(summoner):
 
     if response is None:
         return None
+    name = response["name"]
     puuid = response["puuid"]
     champion_mastery_url = f'https://euw1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}'
 
@@ -37,7 +38,15 @@ def registerSummoner(summoner):
         champion_mastery.pop("summonerId", None)
     response["championMasteries"] = response2
     response["lastGame"] = 0
-    return database.insertPlayerDB(summoner, puuid, response)
+
+    summonerID = getSummonerId(puuid)
+    if summonerID is None:
+        return None
+    elo = getPlayerElo(summonerID)
+    if elo is None:
+        return None
+    response["elo"] = elo
+    return database.insertPlayerDB(name, puuid, response)
 
 
 def updateChampions():
@@ -187,17 +196,17 @@ def getRankedGames(puuid, limitDate, endTime, count):
     if matchesIDs is None or len(matchesIDs) == 0:
         return {}
     dicMatches = {}
-    while len(dicMatches) < count:
-        for matchId in matchesIDs:
-            if database.checkGameBlacklist(matchId):
-                continue
-            if database.checkGameDB(matchId):
-                info = database.getGameDB(matchId)
-            else:
-                info = getMatchInfo(matchId)
-            if info is None:
-                continue
-            dicMatches[matchId] = info
+    for matchId in matchesIDs:
+        if database.checkGameBlacklist(matchId):
+            continue
+        if database.checkGameDB(matchId):
+            info = database.getGameDB(matchId)
+        else:
+            info = getMatchInfo(matchId)
+            database.storeGameDB(info)
+        if info is None:
+            continue
+        dicMatches[matchId] = info
     return dicMatches
 
 
@@ -215,6 +224,14 @@ def getSummonerPUUID(summonerName):
     if data is None:
         return None
     return data["puuid"]
+
+
+def getSummonerId(summonerPUUID):
+    summonerPUUIDAPI = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{summonerPUUID}'
+    data = doRequest(summonerPUUIDAPI)
+    if data is None:
+        return None
+    return data["id"]
 
 
 def getSummonerPUUIDbySummonerId(summonerId):
@@ -259,6 +276,15 @@ def getProPlayers():
         print(f'No se ha recuperado la lista de los proplayers')
         exit(-1)
     return data['entries']
+
+
+def getPlayerElo(summonerID):
+    eloAPI = f"https://euw1.api.riotgames.com/lol/league/v4/entries/by-summoner/{summonerID}"
+    data = doRequest(eloAPI)
+    if data is None:
+        print(f'No se ha recuperado el elo correctamente')
+        exit(-1)
+    return data
 
 
 def doRequest(APIurl):

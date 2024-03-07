@@ -25,19 +25,33 @@ def processPlayer(name):
         getQuickPlayerInfo(name, puuid, matches)
 
 
+def getDataFromProHistory(dicMatches):
+    # TODO Aplicar funciones 1, 2, 4, 6 si es jungla y 7
+    pass
+
+
 def getQuickPlayerInfo(name, puuid, matches):
     mostPlayedPosition = getMostPlayedPosition(name, puuid, matches)
+
+    #  1- Función de daño a objetivos y/o torretas promedio de las 10 últimas partidas jugadas
+    data = getReferenceData(mostPlayedPosition)
+    proDmgToObjectivesTurretsData = dmgToObjectivesTurrets(data['puuid'], data['matches'], mostPlayedPosition, {})
+    pointsDmgToObjectivesTurrets = dmgToObjectivesTurrets(puuid, matches, mostPlayedPosition,
+                                                          proDmgToObjectivesTurretsData)
+    print(pointsDmgToObjectivesTurrets)
     # TODO
-    #  - Función de daño a objetivos y/o torretas promedio de las 10 últimas partidas jugadas
-    #  - Función que calcule los pingeos promedios y los compare con el del jugador
-    #  - Función que compruebe si se lleva la primera kill con frecuencia
-    #  - Función que compruebe si recibe más daño del que inflige
-    #  - Función que compruebe si ha hecho alguna pentakill o alguna quadrakill recientemente
-    #  - Función que compruebe si ha robado objetivos recientemente
-    #  - Función que obtenga la visión por minuto y valore el resultado
-    getProPlayersHistory()
-    # dmgToObjectivesTurrets(name, puuid, matches, mostPlayedPosition)
-    pass
+    #  2- Función que calcule los pingeos promedios y los compare con el del jugador
+    #  3- Función que compruebe si se lleva la primera kill con frecuencia
+    #  4- Función que compruebe si recibe más daño del que inflige o si inflige poco daño en comparación al promedio del equipo
+    #  5- Función que compruebe si ha hecho alguna pentakill o alguna quadrakill recientemente
+    #  6- Función que compruebe si ha robado objetivos recientemente
+    #  7- Función que obtenga la visión por minuto y valore el resultado
+
+
+def getReferenceData(position):
+    dicData = getProPlayersHistoryByPosition(position)
+    # return getDataFromProHistory(dicMatches)
+    return dicData
 
 
 def updatePlayerGames(name, puuid, count):
@@ -78,7 +92,7 @@ def updatePlayerGames(name, puuid, count):
 def getAllPlayerMatches(name, puuid):
     matches = database.getAllPlayersGames(puuid)
     if 0 < len(matches) <= 100:
-        matches2 = updatePlayerGames(name, puuid, 100-len(matches))
+        matches2 = updatePlayerGames(name, puuid, 100 - len(matches))
     else:
         matches2 = updatePlayerGames(name, puuid, 100)
     for matchID, matchInfo in matches2:
@@ -856,7 +870,8 @@ def getResultsWithPartner(puuid, matches):
     for stranger in nonPartners:
         dicPartners.pop(stranger)
     for companion in dicPartners.values():
-        print(f'{companion[0]}: {companion[1]} victorias y {companion[2]} derrotas, haciendo un winrate de {round((companion[1]/(companion[1] + companion[2])) * 100, 2)}%')
+        print(
+            f'{companion[0]}: {companion[1]} victorias y {companion[2]} derrotas, haciendo un winrate de {round((companion[1] / (companion[1] + companion[2])) * 100, 2)}%')
 
 
 def getWinrateAgainstChampions(puuid, matches):
@@ -1079,7 +1094,8 @@ def getWinrateAlongsideChampions(puuid, matches):
                 else:
                     withChamps[ownChamp][partnerChamp][partnerPosition]["loses"] += 1
 
-    print(f'Se imprimen los campeones compañeros en todas las posiciones independientemente de dónde se jugara el campeón')
+    print(
+        f'Se imprimen los campeones compañeros en todas las posiciones independientemente de dónde se jugara el campeón')
     for playerChampion, partners in withChamps.items():
         print(f'Stats para el campeón {playerChampion}:')
         for partner, positions in withChamps[playerChampion].items():
@@ -1088,11 +1104,12 @@ def getWinrateAlongsideChampions(puuid, matches):
                 totalWins += stats["wins"]
                 totalLoses += stats["loses"]
                 winrate = round(stats["wins"] / (stats["wins"] + stats["loses"]) * 100, 2)
-                print(f'\t{partner}({pos}): {stats["wins"]} victorias y {stats["loses"]} derrotas, haciendo un total de {winrate} %')
+                print(
+                    f'\t{partner}({pos}): {stats["wins"]} victorias y {stats["loses"]} derrotas, haciendo un total de {winrate} %')
             print(
                 f"\tEsto hace un balance de {totalWins} victorias y {totalLoses} derrotas con {partner} en todas sus posiciones, con un rendimiento de {round(totalWins / (totalWins + totalLoses) * 100, 2)} %\n")
         print("\n")
-    print(f'TOTAL ANALIZADAS: {len(matches)-remakes}')
+    print(f'TOTAL ANALIZADAS: {len(matches) - remakes}')
     print(f'TOTAL REMAKES: {remakes}')
 
 
@@ -1107,21 +1124,69 @@ def getSeasonAndPatch(match):
         return None
 
 
-def dmgToObjectivesTurrets(name, puuid, matches, position):
+def dmgToObjectivesTurrets(puuid, matches, position, proData):
     # TODO Habría que valorar estos datos en función de la posición, ya que:
     #  TOP: ++Daño a torres = ++Daño a estructuras > +Daño a objetivos
     #  JUNGLA: ++Daño a objetivos > +Daño a torres = +Daño a estructuras
     #  MID & ADC: +Daño a torres = +Daño a estructuras = +Daño a objetivos
     #  SUPPORT: +Daño a objetivos > -Daño a torres = -Daño a estructuras
-
+    # TODO Cambiar valores y usarlos para valorar las diferencias obtenidas
     i = 0
-    dicDamage = {}
-    while i < 10:
-        for matchID, matchData in matches.items():
-            info = getMatchPlayerInfo(puuid, matchData)
-            dicDamage[matchID] = {'damageDealtToBuildings': info['damageDealtToBuildings'],
-                                  'damageDealtToObjectives': info['damageDealtToObjectives'],
-                                  'damageDealtToTurrets': info['damageDealtToTurrets']}
+    dicDamage = {'damageDealtToBuildings': 0,
+                 'damageDealtToObjectives': 0,
+                 'damageDealtToTurrets': 0}
+    for matchData in matches.values():
+        info = getMatchPlayerInfo(puuid, matchData)
+        pos = getPlayerPosition(info)
+        if pos != position:
+            continue
+        dicDamage['damageDealtToBuildings'] += info['damageDealtToBuildings']
+        dicDamage['damageDealtToObjectives'] += info['damageDealtToObjectives']
+        dicDamage['damageDealtToTurrets'] += info['damageDealtToTurrets']
+        i += 1
+        if i == 10:
+            break
+    dicDamage['damageDealtToBuildings'] = round(dicDamage['damageDealtToBuildings']/10)
+    dicDamage['damageDealtToObjectives'] = round(dicDamage['damageDealtToObjectives']/10)
+    dicDamage['damageDealtToTurrets'] = round(dicDamage['damageDealtToTurrets']/10)
+
+    # Si proData está vacío, significa que estamos procesando a un proPlayer para obtener sus datos de referencia
+    if proData == {}:
+        return dicDamage
+    # Si proData NO es vacío, entonces devolvemos los resultados de compararlo con los datos de referencia
+    else:
+        highImportanceRange = [-1500, -1000, -500, 500, 1000, 1500]
+        mediumImportanceRange = [-3000, -1500, -750, 750, 1500, 3000]
+        lowImportanceRange = [-5000, -2500, -1000, 1000, 2500, 5000]
+        importancePoints = [1, 2, 3, 4, 5, 6, 7]
+        pointsBuildings = pointsObjectives = pointsTurrets = 0
+        diffBuildings = dicDamage['damageDealtToBuildings'] - proData['damageDealtToBuildings']
+        diffObjectives = dicDamage['damageDealtToObjectives'] - proData['damageDealtToObjectives']
+        diffTurrets = dicDamage['damageDealtToTurrets'] - proData['damageDealtToTurrets']
+        if position == 'TOP':
+            pointsBuildings = getPointsGivenRange(diffBuildings, highImportanceRange, importancePoints)
+            pointsObjectives = getPointsGivenRange(diffObjectives, mediumImportanceRange, importancePoints)
+            pointsTurrets = getPointsGivenRange(diffTurrets, highImportanceRange, importancePoints)
+        elif position == 'JUNGLE':
+            pointsBuildings = getPointsGivenRange(diffBuildings, mediumImportanceRange, importancePoints)
+            pointsObjectives = getPointsGivenRange(diffObjectives, highImportanceRange, importancePoints)
+            pointsTurrets = getPointsGivenRange(diffTurrets, mediumImportanceRange, importancePoints)
+        elif position == 'MIDDLE':
+            pointsBuildings = getPointsGivenRange(diffBuildings, mediumImportanceRange, importancePoints)
+            pointsObjectives = getPointsGivenRange(diffObjectives, mediumImportanceRange, importancePoints)
+            pointsTurrets = getPointsGivenRange(diffTurrets, lowImportanceRange, importancePoints)
+        elif position == 'BOTTOM':
+            pointsBuildings = getPointsGivenRange(diffBuildings, mediumImportanceRange, importancePoints)
+            pointsObjectives = getPointsGivenRange(diffObjectives, mediumImportanceRange, importancePoints)
+            pointsTurrets = getPointsGivenRange(diffTurrets, lowImportanceRange, importancePoints)
+        elif position == 'UTILITY':
+            pointsBuildings = getPointsGivenRange(diffBuildings, lowImportanceRange, importancePoints)
+            pointsObjectives = getPointsGivenRange(diffObjectives, mediumImportanceRange, importancePoints)
+            pointsTurrets = getPointsGivenRange(diffTurrets, lowImportanceRange, importancePoints)
+        dicDamage = {'pointsBuildings': pointsBuildings,
+                     'pointsObjectives': pointsObjectives,
+                     'pointsTurrets': pointsTurrets}
+        return dicDamage
 
 
 def getMostPlayedPosition(name, puuid, matches):
@@ -1143,22 +1208,103 @@ def getMostPlayedPosition(name, puuid, matches):
 def getProPlayersHistory():
     # Recuperamos la lista de los mejores proPlayers
     proPlayers = api.getProPlayers()
+    dicMatches = {}
     count = 0
+    top = jungle = mid = adc = support = False
     for pro in proPlayers:
+        if top and jungle and mid and adc and support:
+            break
         proPUUID = api.getSummonerPUUIDbySummonerId(pro['summonerId'])
         proName = pro['summonerName']
-        proMatches = {}
         print(f'Procesando al jugador {proName}')
         # Si el proPlayer existe en nuestra BBDD, entonces recuperamos sus partidas y las analizamos para obtener los datos de referencia
         if database.checkPlayerDB(proPUUID):
             proMatches = database.getAllPlayersGames(proPUUID)
-            count += 1
         # Si no existe, entonces pedimos las primeras 20 partidas de tipo Ranked a la API y obtenemos sus datos de referencia
         else:
-            proMatches = api.getRankedGames(proPUUID, 0, time.time(), 20)
+            # Registramos al proPlayer
+            api.registerSummoner(proPUUID)
+            proMatches = api.getRankedGames(proPUUID, 0, round(time.time()), 20)
+        if 0 <= len(proMatches) < 20:
+            proNewMatches = api.getRankedGames(proPUUID, 0, round(time.time()), 20)
+            for newMatchID, newMatchInfo in proNewMatches.items():
+                if newMatchID in proMatches:
+                    continue
+                proMatches[newMatchID] = newMatchInfo
+            if 0 <= len(proMatches) < 20:
+                continue
+        position = getMostPlayedPosition(proName, proPUUID, proMatches)
+        if position == 'TOP' and top or position == 'JUNGLE' and jungle or position == 'MIDDLE' and mid or position == 'BOTTOM' and adc or position == 'UTILITY' and support:
+            continue
+        elif position == 'TOP' and not top:
+            top = True
+            dicMatches[position] = {}
+        elif position == 'JUNGLE' and not jungle:
+            jungle = True
+            dicMatches[position] = {}
+        elif position == 'MIDDLE' and not mid:
+            mid = True
+            dicMatches[position] = {}
+        elif position == 'BOTTOM' and not adc:
+            adc = True
+            dicMatches[position] = {}
+        elif position == 'UTILITY' and not support:
+            support = True
+            dicMatches[position] = {}
+
+        if proPUUID not in dicMatches[position].keys():
+            dicMatches[position][proPUUID] = {}
             count += 1
-        # TODO Obtener info de referencia una vez obtenidos todos los proMatches
+            for matchID, matchInfo in proMatches.items():
+                if matchID in dicMatches[position][proPUUID].keys():
+                    continue
+                dicMatches[position][proPUUID][matchID] = matchInfo
+                if database.checkGameDB(matchID):
+                    continue
+                database.storeGameDB(matchInfo)
+
     print(f'Se han obtenido las partidas de los {count} proPlayers')
+    return dicMatches
+
+
+def getProPlayersHistoryByPosition(position):
+    # Recuperamos la lista de los mejores proPlayers
+    proPlayers = api.getProPlayers()
+    for pro in proPlayers:
+        proPUUID = api.getSummonerPUUIDbySummonerId(pro['summonerId'])
+        proName = pro['summonerName']
+        print(f'Procesando al jugador {proName}')
+        # Si el proPlayer existe en nuestra BBDD, entonces recuperamos sus partidas y las analizamos para obtener los datos de referencia
+        if database.checkPlayerDB(proPUUID):
+            proMatches = database.getAllPlayersGames(proPUUID)
+        # Si no existe, entonces pedimos las primeras 20 partidas de tipo Ranked a la API y obtenemos sus datos de referencia
+        else:
+            # Registramos al proPlayer
+            api.registerSummoner(proPUUID)
+            proMatches = api.getRankedGames(proPUUID, 0, round(time.time()), 20)
+        if 0 <= len(proMatches) < 20:
+            proNewMatches = api.getRankedGames(proPUUID, 0, round(time.time()), 20)
+            for newMatchID, newMatchInfo in proNewMatches.items():
+                if newMatchID in proMatches:
+                    continue
+                proMatches[newMatchID] = newMatchInfo
+            if 0 <= len(proMatches) < 20:
+                continue
+        dicPos = getMatchesPosition(proName, proPUUID, proMatches)
+        proPos = sum(dicPos[position].values())
+        if proPos >= 15:
+            dicData = {'puuid': proPUUID,
+                       'name': proName,
+                       'matches': {}}
+            for matchID, matchInfo in proMatches.items():
+                pos = getPlayerPosition(getMatchPlayerInfo(proPUUID, matchInfo))
+                if pos == position:
+                    dicData['matches'][matchID] = matchInfo
+                if database.checkGameDB(matchID):
+                    continue
+                database.storeGameDB(matchInfo)
+            print(f'Se han obtenido las partidas de {proName}')
+            return dicData
 # FUNCIONES GRÁFICAS TEMPORALES
 
 
