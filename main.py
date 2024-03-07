@@ -13,5 +13,5 @@ if __name__ == '__main__':
     else:
         # api.getMatches(puuidInicial)
         proc_data.processPlayer(summoner_name)
-        # database.getQueues() 
+        # database.getQueues()
 

@@ -24,31 +24,9 @@ def processPlayer(name):
         # getWinrateAlongsideChampions(puuid, matches)
         getQuickPlayerInfo(name, puuid, matches)
 
-
-def getDataFromProHistory(dicMatches):
-    # TODO Aplicar funciones 1, 2, 4, 6 si es jungla y 7
-    pass
-
-
-def getQuickPlayerInfo(name, puuid, matches):
-    mostPlayedPosition = getMostPlayedPosition(name, puuid, matches)
-
-    #  1- Función de daño a objetivos y/o torretas promedio de las 10 últimas partidas jugadas
-    data = getReferenceData(mostPlayedPosition)
-    proDmgToObjectivesTurretsData = dmgToObjectivesTurrets(data['puuid'], data['matches'], mostPlayedPosition, {})
-    pointsDmgToObjectivesTurrets = dmgToObjectivesTurrets(puuid, matches, mostPlayedPosition,
-                                                          proDmgToObjectivesTurretsData)
-    print(pointsDmgToObjectivesTurrets)
-    # TODO
-    #  2- Función que calcule los pingeos promedios y los compare con el del jugador
-    #  3- Función que compruebe si se lleva la primera kill con frecuencia
-    #  4- Función que compruebe si recibe más daño del que inflige o si inflige poco daño en comparación al promedio del equipo
-    #  5- Función que compruebe si ha hecho alguna pentakill o alguna quadrakill recientemente
-    #  6- Función que compruebe si ha robado objetivos recientemente
-    #  7- Función que obtenga la visión por minuto y valore el resultado
-
-
 def getReferenceData(position):
+    # TODO Posiblemente se pueda hacer un control de casos, donde primero se intente rescatar un proPlayer de la BBDD
+    #  con suficientes partidas almacenadas (crear nueva función) antes que buscarlo en la API
     dicData = getProPlayersHistoryByPosition(position)
     # return getDataFromProHistory(dicMatches)
     return dicData
@@ -1124,8 +1102,39 @@ def getSeasonAndPatch(match):
         return None
 
 
+def getQuickPlayerInfo(name, puuid, matches):
+    mostPlayedPosition = getMostPlayedPosition(name, puuid, matches)
+    # data = getReferenceData(mostPlayedPosition)
+
+    #  1- Función de daño a objetivos y/o torretas promedio de las 10 últimas partidas jugadas
+    # proDmgToObjectivesTurretsData = dmgToObjectivesTurrets(data['puuid'], data['matches'], mostPlayedPosition, {})
+    # pointsDmgToObjectivesTurrets = dmgToObjectivesTurrets(puuid, matches, mostPlayedPosition, proDmgToObjectivesTurretsData)
+    # print(pointsDmgToObjectivesTurrets)
+    #  2- Función que calcule los pingeos promedios y los compare con el del jugador
+    # proMeanPlayerPings = meanPlayerPings(data['puuid'], data['matches'], {})
+    # playerPings = meanPlayerPings(puuid, matches, proMeanPlayerPings)
+    # print(playerPings)
+    #  3- Función que compruebe si se lleva la primera kill con frecuencia
+    # firstKiller = usualFirstKillerOrAssistant(puuid, matches)
+    # print(firstKiller)
+    # TODO
+    #  4- Función que compara los daños recibidos e infligidos con los de su rival de posición
+    dicDamage = damageTakenAndCaused(puuid, matches, mostPlayedPosition)
+    print(dicDamage)
+    #  5- Función que compruebe si ha hecho alguna multikill recientemente
+    # dicKills = isPlayerMultikiller(puuid, matches)
+    # print(dicKills)
+    #  6- Función que compruebe si ha robado objetivos recientemente
+    # objectiveThief = isObjectiveThief(puuid, matches)
+    # print(objectiveThief)
+    #  7- Función que obtenga la visión por minuto y valore el resultado
+    # proVision = getVisionPerMin(data['puuid'], data['matches'], mostPlayedPosition, {})
+    # playerVision = getVisionPerMin(puuid, matches, mostPlayedPosition, proVision)
+    # print(playerVision)
+
+
 def dmgToObjectivesTurrets(puuid, matches, position, proData):
-    # TODO Habría que valorar estos datos en función de la posición, ya que:
+    # Habría que valorar estos datos en función de la posición, ya que:
     #  TOP: ++Daño a torres = ++Daño a estructuras > +Daño a objetivos
     #  JUNGLA: ++Daño a objetivos > +Daño a torres = +Daño a estructuras
     #  MID & ADC: +Daño a torres = +Daño a estructuras = +Daño a objetivos
@@ -1187,6 +1196,220 @@ def dmgToObjectivesTurrets(puuid, matches, position, proData):
                      'pointsObjectives': pointsObjectives,
                      'pointsTurrets': pointsTurrets}
         return dicDamage
+
+
+def meanPlayerPings(puuid, matches, proData):
+    i = 0
+    dicPings = {
+        'allInPings': 0,
+        'assistMePings': 0,
+        'basicPings': 0,
+        'commandPings': 0,
+        'dangerPings': 0,
+        'enemyMissingPings': 0,
+        'enemyVisionPings': 0,
+        'getBackPings': 0,
+        'holdPings': 0,
+        'needVisionPings': 0,
+        'onMyWayPings': 0,
+        'pushPings': 0,
+        'visionClearedPings': 0
+    }
+    for matchID, matchInfo in matches.items():
+        playerInfo = getMatchPlayerInfo(puuid, matchInfo)
+        for key in dicPings:
+            try:
+                dicPings[key] += playerInfo[key]
+            except KeyError as e:
+                print(f'{e} en {matchID} para {puuid}')
+        i += 1
+        if i >= 10:
+            break
+    if proData == {}:
+        return dicPings
+    else:
+        proPings = round(sum(proData.values()) * 1.25)
+        totalPings = sum(dicPings.values())
+        if proPings < totalPings:
+            return True
+        return False
+
+
+def usualFirstKillerOrAssistant(puuid, matches):
+    i = 0
+    firstKillParticipation = 0
+    for matchInfo in matches.values():
+        info = getMatchPlayerInfo(puuid, matchInfo)
+        if info['firstBloodAssist'] or info['firstBloodKill']:
+            firstKillParticipation += 1
+        i += 1
+        if i >= 15:
+            break
+    if firstKillParticipation > 4:
+        return True
+    return False
+
+
+def damageTakenAndCaused(puuid, matches, position):
+    i = 0
+    dicDamage = {
+        'totalDamageDealt': 0,
+        'totalDamageDealtToChampions': 0,
+        'totalDamageTaken': 0
+    }
+    for matchID, matchInfo in matches.items():
+        info = getMatchPlayerInfo(puuid, matchInfo)
+        playerPosition = getPlayerPosition(info)
+        if playerPosition != position:
+            continue
+        totalDamageDealt = info['totalDamageDealt']
+        totalDamageDealtToChampions = info['totalDamageDealtToChampions']
+        totalDamageTaken = info['totalDamageTaken']
+        teamID = info['teamId']
+        for participant in matchInfo['info']['participants']:
+            if participant['teamId'] == teamID:
+                continue
+            if getPlayerPosition(participant) == playerPosition:
+                rivalDamageDealt = participant['totalDamageDealt']
+                rivalDamageDealtToChampions = participant['totalDamageDealtToChampions']
+                rivalDamageTaken = participant['totalDamageTaken']
+
+                if totalDamageDealt - rivalDamageDealt < 0:
+                    dicDamage['totalDamageDealt'] -= 1
+                elif totalDamageDealt - rivalDamageDealt > 0:
+                    dicDamage['totalDamageDealt'] += 1
+                if totalDamageDealtToChampions - rivalDamageDealtToChampions < 0:
+                    dicDamage['totalDamageDealtToChampions'] -= 1
+                elif totalDamageDealtToChampions - rivalDamageDealtToChampions > 0:
+                    dicDamage['totalDamageDealtToChampions'] += 1
+                if totalDamageTaken - rivalDamageTaken < 0:
+                    dicDamage['totalDamageTaken'] -= 1
+                elif totalDamageTaken - rivalDamageTaken > 0:
+                    dicDamage['totalDamageTaken'] += 1
+                i += 1
+                break
+        if i >= 10:
+            break
+    return dicDamage
+
+
+
+
+
+def isObjectiveThief(puuid, matches):
+    i = 0
+    for matchInfo in matches.values():
+        info = getMatchPlayerInfo(puuid, matchInfo)
+        if info['objectivesStolen'] > 0:
+            return True
+        i += 1
+        if i >= 5:
+            break
+    return False
+
+
+def isPlayerMultikiller(puuid, matches):
+    i = 0
+    dicKills = {
+        'pentaKills': {'count': 0, 'flag': False},
+        'quadraKills': {'count': 0, 'flag': False},
+        'tripleKills': {'count': 0, 'flag': False},
+        'doubleKills': {'count': 0, 'flag': False}
+    }
+    for matchID, matchInfo in matches.items():
+        info = getMatchPlayerInfo(puuid, matchInfo)
+        for key in dicKills:
+            try:
+                dicKills[key]['count'] += info[key]
+            except KeyError as e:
+                print(f'{e} en {matchID} para {puuid}')
+        i += 1
+        if i >= 15:
+            break
+    if dicKills['pentaKills']['count'] > 0:
+        dicKills['pentaKills']['flag'] = True
+    if dicKills['quadraKills']['count'] > 0:
+        dicKills['quadraKills']['flag'] = True
+    if dicKills['tripleKills']['count'] > 2:
+        dicKills['tripleKills']['flag'] = True
+    if dicKills['doubleKills']['count'] > 5:
+        dicKills['doubleKills']['flag'] = True
+    return dicKills
+
+
+def getVisionPerMin(puuid, matches, position, proData):
+    i = totalDuration = 0
+    dicVision = {
+        'visionScore': 0,
+        'detectorWardsPlaced': 0,
+        'wardsPlaced': 0,
+        'wardsKilled': 0
+    }
+    for matchID, matchData in matches.items():
+        info = getMatchPlayerInfo(puuid, matchData)
+        if getPlayerPosition(info) != position:
+            continue
+        totalDuration += matchData['info']['gameDuration']
+        for key in dicVision:
+            try:
+                dicVision[key] += info[key]
+            except KeyError as e:
+                print(f'{e} en {matchID} para {puuid}')
+        i += 1
+        if i >= 15:
+            break
+    totalDuration = round(totalDuration/60, 2)
+    visionPerMin = round(dicVision['visionScore']/totalDuration, 2)
+    dicVision['visionPerMin'] = visionPerMin
+
+    if proData == {}:
+        return dicVision
+    else:
+        diffVisionPerMin = dicVision['visionPerMin'] - proData['visionPerMin']
+        diffDetectorWards = dicVision['detectorWardsPlaced'] - proData['detectorWardsPlaced']
+        diffVisionWards = dicVision['wardsPlaced'] - proData['wardsPlaced']
+        diffWardsKilled = dicVision['wardsKilled'] - proData['wardsKilled']
+        dicPlayerVision = {}
+        if diffVisionPerMin >= 0.5:
+            # Buena visión
+            dicPlayerVision['goodVision'] = 1
+        elif diffVisionPerMin <= -0.5:
+            # Mala visión
+            dicPlayerVision['goodVision'] = -1
+        else:
+            # No es buena ni mala
+            dicPlayerVision['goodVision'] = 0
+
+        if diffDetectorWards >= 20:
+            # Buena visión
+            dicPlayerVision['diffDetectorWards'] = 1
+        elif diffDetectorWards <= -20:
+            # Mala visión
+            dicPlayerVision['diffDetectorWards'] = -1
+        else:
+            # No es buena ni mala
+            dicPlayerVision['diffDetectorWards'] = 0
+
+        if diffVisionWards >= 25:
+            # Buena visión
+            dicPlayerVision['diffVisionWards'] = 1
+        elif diffVisionWards <= -25:
+            # Mala visión
+            dicPlayerVision['diffVisionWards'] = -1
+        else:
+            # No es buena ni mala
+            dicPlayerVision['diffVisionWards'] = 0
+
+        if diffWardsKilled >= 15:
+            # Buena visión
+            dicPlayerVision['diffWardsKilled'] = 1
+        elif diffWardsKilled <= -15:
+            # Mala visión
+            dicPlayerVision['diffWardsKilled'] = -1
+        else:
+            # No es buena ni mala
+            dicPlayerVision['diffWardsKilled'] = 0
+        return dicPlayerVision
 
 
 def getMostPlayedPosition(name, puuid, matches):
