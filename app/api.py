@@ -261,12 +261,12 @@ def getMatchInfo(matchID):
     return matchInfo
 
 
-def storeMatchTimeline(matchID):
+def getMatchTimeline(matchID):
     matchTimelineAPI = f'https://europe.api.riotgames.com/lol/match/v5/matches/{matchID}/timeline'
     timeline = doRequest(matchTimelineAPI)
     if timeline is None:
         print(f'No se ha recuperado la timeline de la partida con id {matchID}')
-    database.storeGameTimelineDB(timeline)
+    return timeline
 
 
 def getProPlayers():

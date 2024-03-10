@@ -1,6 +1,12 @@
 import time
 from enum import Enum
 import re
+
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import image as mpimg
+import seaborn as sns
+
 from app import api, database
 
 
@@ -22,7 +28,9 @@ def processPlayer(name):
         # getResultsWithPartner(puuid, matches)
         # getWinrateAgainstChampions(puuid, matches)
         # getWinrateAlongsideChampions(puuid, matches)
-        getQuickPlayerInfo(name, puuid, matches)
+        # getQuickPlayerInfo(name, puuid, matches)
+        drawKillsHeatmaps(puuid, matches)
+
 
 def getReferenceData(position):
     # TODO Posiblemente se pueda hacer un control de casos, donde primero se intente rescatar un proPlayer de la BBDD
@@ -1155,9 +1163,9 @@ def dmgToObjectivesTurrets(puuid, matches, position, proData):
         i += 1
         if i == 10:
             break
-    dicDamage['damageDealtToBuildings'] = round(dicDamage['damageDealtToBuildings']/10)
-    dicDamage['damageDealtToObjectives'] = round(dicDamage['damageDealtToObjectives']/10)
-    dicDamage['damageDealtToTurrets'] = round(dicDamage['damageDealtToTurrets']/10)
+    dicDamage['damageDealtToBuildings'] = round(dicDamage['damageDealtToBuildings'] / 10)
+    dicDamage['damageDealtToObjectives'] = round(dicDamage['damageDealtToObjectives'] / 10)
+    dicDamage['damageDealtToTurrets'] = round(dicDamage['damageDealtToTurrets'] / 10)
 
     # Si proData está vacío, significa que estamos procesando a un proPlayer para obtener sus datos de referencia
     if proData == {}:
@@ -1293,9 +1301,6 @@ def damageTakenAndCaused(puuid, matches, position):
     return dicDamage
 
 
-
-
-
 def isObjectiveThief(puuid, matches):
     i = 0
     for matchInfo in matches.values():
@@ -1358,8 +1363,8 @@ def getVisionPerMin(puuid, matches, position, proData):
         i += 1
         if i >= 15:
             break
-    totalDuration = round(totalDuration/60, 2)
-    visionPerMin = round(dicVision['visionScore']/totalDuration, 2)
+    totalDuration = round(totalDuration / 60, 2)
+    visionPerMin = round(dicVision['visionScore'] / totalDuration, 2)
     dicVision['visionPerMin'] = visionPerMin
 
     if proData == {}:
@@ -1528,6 +1533,106 @@ def getProPlayersHistoryByPosition(position):
                 database.storeGameDB(matchInfo)
             print(f'Se han obtenido las partidas de {proName}')
             return dicData
+
+
+def plotImage(listName, pointList, color):
+    scaleFactor = 10
+    imagePath = './lib/map/map.png'
+    scaledPoints = [((x - 240) / scaleFactor, (14980 - y + 240) / scaleFactor) for x, y in pointList]
+    img = mpimg.imread(imagePath)
+    plt.imshow(img)
+    for scaledX, scaledY in scaledPoints:
+        plt.scatter(scaledX, scaledY, color=color, s=75)
+    plt.axis('off')
+    plt.title(listName)
+    plt.show()
+
+
+def plotHeatMap(listName, pointList):
+    scaleFactor = 10
+    imagePath = './lib/map/map.png'
+    scaledPoints = [((x - 240) / scaleFactor, (14980 - y + 240) / scaleFactor) for x, y in pointList]
+    img = mpimg.imread(imagePath)
+    plt.imshow(img)
+
+    heatmap = np.zeros((1499, 1499))
+
+    # Agregar cada punto al heatmap
+    for scaled_x, scaled_y in scaledPoints:
+        heatmap[int(scaled_y), int(scaled_x)] += 1  # Incrementar el valor en el punto del heatmap
+
+    # Crear un mapa de calor (heatmap) usando kdeplot
+    sns.kdeplot(scaledPoints, fill=True)
+
+    plt.axis('off')
+    plt.title(listName)
+    plt.show()
+
+
+def drawKillsHeatmaps(puuid, matches):
+    i = 0
+    blueKillPositions = []
+    redKillPositions = []
+    blueAssistPositions = []
+    redAssistPositions = []
+    blueDeathPositions = []
+    redDeathPositions = []
+    for matchID, matchData in matches.items():
+        matchTimeline = api.getMatchTimeline(matchID)
+        playerID = 0
+        for index, participant in enumerate(matchTimeline['metadata']['participants']):
+            if participant == puuid:
+                playerID = index + 1
+        if playerID == 0:
+            continue
+        teamID = getMatchPlayerInfo(puuid, matchData)['teamId']
+        if teamID != 100 and teamID != 200:
+            continue
+        frames = matchTimeline['info']['frames']
+        for frame in frames:
+            for event in frame['events']:
+                if event['type'] == 'CHAMPION_KILL':
+                    if event['killerId'] == playerID:
+                        if teamID == 100:
+                            blueKillPositions.append((event['position']['x'], event['position']['y']))
+                        elif teamID == 200:
+                            redKillPositions.append((event['position']['x'], event['position']['y']))
+                    elif event['victimId'] == playerID:
+                        if teamID == 100:
+                            blueDeathPositions.append((event['position']['x'], event['position']['y']))
+                        elif teamID == 200:
+                            redDeathPositions.append((event['position']['x'], event['position']['y']))
+                    try:
+                        if playerID in event['assistingParticipantIds']:
+                            if teamID == 100:
+                                blueAssistPositions.append((event['position']['x'], event['position']['y']))
+                            elif teamID == 200:
+                                redAssistPositions.append((event['position']['x'], event['position']['y']))
+                    except KeyError:
+                        continue
+        i += 1
+        if i >= 8:
+            break
+    plotImage('blueKillPositions', blueKillPositions, 'blue')
+    # plotImage('redKillPositions', redKillPositions, 'red')
+    # plotImage('blueAssistPositions', blueAssistPositions, 'blue')
+    # plotImage('redAssistPositions', redAssistPositions, 'red')
+    # plotImage('blueDeathPositions', blueDeathPositions, 'blue')
+    # plotImage('redDeathPositions', redDeathPositions, 'red')
+    # plotImage('AllKillPositions', blueKillPositions + redKillPositions, 'black')
+    # plotImage('AllAssistPositions', blueAssistPositions + redAssistPositions, 'yellow')
+    # plotImage('AllDeathPositions', blueDeathPositions + redDeathPositions, 'white')
+
+    plotHeatMap('blueKillPositions', blueKillPositions)
+    # plotHeatMap('redKillPositions', redKillPositions)
+    # plotHeatMap('blueAssistPositions', blueAssistPositions)
+    # plotHeatMap('redAssistPositions', redAssistPositions)
+    # plotHeatMap('blueDeathPositions', blueDeathPositions)
+    # plotHeatMap('redDeathPositions', redDeathPositions)
+    # plotHeatMap('AllKillPositions', blueKillPositions + redKillPositions)
+    # plotHeatMap('AllAssistPositions', blueAssistPositions + redAssistPositions)
+    # plotHeatMap('AllDeathPositions', blueDeathPositions + redDeathPositions)
+
 # FUNCIONES GRÁFICAS TEMPORALES
 
 
