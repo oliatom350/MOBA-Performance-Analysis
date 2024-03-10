@@ -2,7 +2,7 @@ import time
 from enum import Enum
 import re
 
-import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import image as mpimg
 import seaborn as sns
@@ -1555,14 +1555,8 @@ def plotHeatMap(listName, pointList):
     img = mpimg.imread(imagePath)
     plt.imshow(img)
 
-    heatmap = np.zeros((1499, 1499))
-
-    # Agregar cada punto al heatmap
-    for scaled_x, scaled_y in scaledPoints:
-        heatmap[int(scaled_y), int(scaled_x)] += 1  # Incrementar el valor en el punto del heatmap
-
-    # Crear un mapa de calor (heatmap) usando kdeplot
-    sns.kdeplot(scaledPoints, fill=True)
+    df = pd.DataFrame(scaledPoints, columns=['x', 'y'])
+    sns.kdeplot(df, x='x', y='y', fill=True, palette="mako", alpha=0.25)
 
     plt.axis('off')
     plt.title(listName)
@@ -1613,7 +1607,7 @@ def drawKillsHeatmaps(puuid, matches):
         i += 1
         if i >= 8:
             break
-    plotImage('blueKillPositions', blueKillPositions, 'blue')
+    # plotImage('blueKillPositions', blueKillPositions, 'blue')
     # plotImage('redKillPositions', redKillPositions, 'red')
     # plotImage('blueAssistPositions', blueAssistPositions, 'blue')
     # plotImage('redAssistPositions', redAssistPositions, 'red')
