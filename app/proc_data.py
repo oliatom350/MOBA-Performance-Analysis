@@ -1559,8 +1559,9 @@ def plotHeatMap(listName, pointList):
     plt.xlim(0, 1499)
     plt.ylim(1499, 0)
     for scaledX, scaledY in scaledPoints:
-        plt.scatter(scaledX, scaledY, color='white', s=20, alpha=0.15)
-    sns.kdeplot(df, x='x', y='y', fill=True, cmap='Spectral', bw_method=0.3, levels=10, alpha=0.35)
+        plt.scatter(scaledX, scaledY, color='white', s=20, alpha=0.2)
+    sns.kdeplot(df, x='x', y='y', fill=True, cmap='Spectral', antialiased=True, bw_method=0.35, levels=100, alpha=0.35)
+    # sns.kdeplot(df, x='x', y='y', fill=True, cmap='Spectral', color='r', thresh=0, bw_method=0.3, levels=80, alpha=0.25)
     plt.axis('off')
     plt.title(listName)
     plt.show()
