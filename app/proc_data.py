@@ -234,8 +234,6 @@ def getPlayerKDA(name, puuid, matches):
         champName = database.getChampionByKey(info['championId'])
         if match['metadata']['matchId'] not in dicMatches:
             dicMatches[match['metadata']['matchId']] = [kills, deaths, assists]
-        else:
-            pass
 
         # Este fragmento de suma se podría eliminar en el futuro, ya que solo se usa para evitar recorrer de nuevo
         # dicMatches sumando cada estadística al total. dicMatches se puede usar para enviar o devolver la info por partida
@@ -863,7 +861,6 @@ def getResultsWithPartner(puuid, matches):
 def getWinrateAgainstChampions(puuid, matches):
     # El objetivo de esta función es obtener el winrate del jugador contra una serie de campeones concretos.
     # Esto también se puede interpretar como el winrate de cada campeón contra el jugador
-    # TODO Aplicar dict comprehension o list comprehension a algunos de los bucles
     # Creamos cinco diccionarios para los campeones, uno por cada posición
     # La estructura seguida debe ser:
     # {champName: {"champUsed": {"wins": x, "loses": x}, ...}}
@@ -1021,8 +1018,6 @@ def getPlayerPosition(info):
         return info['teamPosition']
     if info['teamPosition'] == info['lane']:
         return info['teamPosition']
-    # if info['teamPosition'] == 'BOTTOM' and info['individualPosition'] == 'BOTTOM' and info['role'] == 'SUPPORT':
-    #     return 'UTILITY'
     if info['teamPosition'] == info['individualPosition']:
         return info['teamPosition']
     if info['lane'] == 'NONE':
