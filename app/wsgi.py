@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from markupsafe import escape
 
 app = Flask(__name__)
@@ -16,6 +16,12 @@ def hello():
         return '<p>Hello, World. This is GET request</p>'
     else:
         return '<p>Hello, World. This is POST request</p>'
+
+
+@app.route('/api/data')
+def get_data():
+    data = {'message': 'Hello from Flask!'}
+    return jsonify(data)
 
 
 if __name__ == '__main__':

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib import image as mpimg
 import seaborn as sns
 
-from app import api, database
+from wsgi import api, database
 
 
 class DamageType(Enum):
@@ -20,7 +20,7 @@ def processPlayer(name):
     puuid = api.getSummonerPUUID(name)
     matches = getAllPlayerMatches(name, puuid)
     if matches:
-        # getMatchesPosition(name, puuid, matches)
+        getMatchesPosition(name, puuid, matches)
         # getPlayerKDA(name, puuid, matches)
         # getPlayerWinrate(name, puuid, matches)
         # getMeanDuration(name, puuid, matches)
@@ -29,7 +29,7 @@ def processPlayer(name):
         # getWinrateAgainstChampions(puuid, matches)
         # getWinrateAlongsideChampions(puuid, matches)
         # getQuickPlayerInfo(name, puuid, matches)
-        drawKillsHeatmaps(puuid, matches)
+        # drawKillsHeatmaps(puuid, matches)
 
 
 def getReferenceData(position):
@@ -92,6 +92,7 @@ def getAllPlayerMatches(name, puuid):
 
 
 def getMatchesPosition(name, puuid, matches):
+    print(f'FUNCIÓN DE PARTIDAS POR POSICIÓN')
     topNorm = jungleNorm = midNorm = adcNorm = suppNorm = topSolo = jungleSolo = midSolo = adcSolo = suppSolo = topFlex \
         = jungleFlex = midFlex = adcFlex = suppFlex = unknown = totalNorm = totalSolo = totalFlex = unknownQueue = 0
     for match in matches.values():
@@ -214,6 +215,7 @@ def getPlayerKDA(name, puuid, matches):
     # - KDA en cada partida
     # - KDA total por tipo de cola
     # - KDA por campeón
+    print(f'FUNCIÓN DE KDA')
     totaldeaths = totalkills = totalassists = deathsNormal = deathsSolo = deathsFlex = killsNormal = killsSolo = \
         killsFlex = assistsNormal = assistsSolo = assistsFlex = totalMatchNormal = totalMatchSolo = totalMatchFlex = 0
     # Creamos los diccionarios vacíos que incluirán las stats por campeones y por partidas
@@ -317,6 +319,7 @@ def getPlayerWinrate(name, puuid, matches):
     # - Winrate por posición
     # - Winrate por campeón
     # TODO Si se quiere comprobar el winrate de un campeón o de una posición en una cola concreta, modificar en el futuro la función
+    print(f'FUNCIÓN DE WINRATE')
     totalVictorias = totalDerrotas = winNormal = loseNormal = winSolo = loseSolo = winFlex = loseFlex = winUnknown = \
         loseUnknown = winTop = loseTop = winJg = loseJg = winMid = loseMid = winAdc = loseAdc = winSupp = loseSupp = 0
     # Creamos un diccionario para los campeones
@@ -476,6 +479,7 @@ def getPlayerWinrate(name, puuid, matches):
 def getMeanDuration(name, puuid, matches):
     # El objetivo de esta función es obtener la duración media de las partidas del jugador. Se puede ampliar a duración
     # media por cola, duración media por campeón y duración media por posición.
+    print(f'FUNCIÓN DE DURACIÓN MEDIA DE PARTIDAS')
     rendiciones = remakes = duracionTotal = countMatches = 0
     for match in matches.values():
         queueType = match['info']['queueId']
@@ -1122,8 +1126,8 @@ def getQuickPlayerInfo(name, puuid, matches):
     # print(firstKiller)
     # TODO
     #  4- Función que compara los daños recibidos e infligidos con los de su rival de posición
-    dicDamage = damageTakenAndCaused(puuid, matches, mostPlayedPosition)
-    print(dicDamage)
+    # dicDamage = damageTakenAndCaused(puuid, matches, mostPlayedPosition)
+    # print(dicDamage)
     #  5- Función que compruebe si ha hecho alguna multikill recientemente
     # dicKills = isPlayerMultikiller(puuid, matches)
     # print(dicKills)
