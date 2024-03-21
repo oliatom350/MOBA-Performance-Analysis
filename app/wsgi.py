@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from markupsafe import escape
 
 app = Flask(__name__)
+CORS(app)
 
 
 @app.route('/<username>')
@@ -18,7 +20,7 @@ def hello():
         return '<p>Hello, World. This is POST request</p>'
 
 
-@app.route('/api/data')
+@app.route('/test')
 def get_data():
     data = {'message': 'Hello from Flask!'}
     return jsonify(data)

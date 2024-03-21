@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib import image as mpimg
 import seaborn as sns
 
-from wsgi import api, database
+from app import api, database
 
 
 class DamageType(Enum):

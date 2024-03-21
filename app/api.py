@@ -1,6 +1,6 @@
 import re
 import requests
-from wsgi import database
+from app import database
 from enum import Enum
 from queue import Queue
 import time
