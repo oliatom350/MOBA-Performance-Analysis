@@ -1,13 +1,14 @@
+import re
 import time
 from enum import Enum
-import re
 
-import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib import image as mpimg
+import pandas as pd
 import seaborn as sns
+from matplotlib import image as mpimg
 
-from app import api, database
+import api
+import database
 
 
 class DamageType(Enum):
