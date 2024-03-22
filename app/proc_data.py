@@ -1,14 +1,13 @@
-import re
 import time
 from enum import Enum
+import re
 
-import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
+import matplotlib.pyplot as plt
 from matplotlib import image as mpimg
+import seaborn as sns
 
-import api
-import database
+from app import api, database
 
 
 class DamageType(Enum):
@@ -21,11 +20,12 @@ def processPlayer(name):
     puuid = api.getSummonerPUUID(name)
     matches = getAllPlayerMatches(name, puuid)
     if matches:
-        getMatchesPosition(name, puuid, matches)
+        # getMatchesPosition(name, puuid, matches)
         # getPlayerKDA(name, puuid, matches)
         # getPlayerWinrate(name, puuid, matches)
         # getMeanDuration(name, puuid, matches)
         # definingChampPool(name, puuid, matches)
+        definingChampPool2(name, puuid, matches)
         # getResultsWithPartner(puuid, matches)
         # getWinrateAgainstChampions(puuid, matches)
         # getWinrateAlongsideChampions(puuid, matches)
@@ -513,6 +513,113 @@ def getGoldDiffs(name, puuid, matchTimeline):
     pass
 
 
+def definingChampPool2(name, puuid, matches):
+    # TODO Posible mejora: Obtener los campeones clasificados en base a la posición
+    # El objetivo es definir una champion pool de 3 los campeones recomendados como máximo que mejor rendimiento dan al
+    # jugador basándonos en diferentes criterios:
+    # - Historial de resultados de cada campeón individual
+    # - Historial de resultados de un tipo de campeón (fighter, tank, etc.)
+    # - Maestría del jugador con los campeones
+    dicChamps = getPlayerWinrate(name, puuid, matches)
+    # Filtramos usando como threshold 4 partidas jugadas
+    poorChamps = []
+    for champ, stats in dicChamps.items():
+        if sum(dicChamps[champ]) < 4:
+            poorChamps.append(champ)
+    for champ in poorChamps:
+        dicChamps.pop(champ)
+
+    # Apartado de resultados por campeón
+    winratesPerChampion = [(champ, stats[0] / sum(stats)) for champ, stats in dicChamps.items()]
+    winratesPerChampion = sorted(winratesPerChampion, key=lambda x: x[1], reverse=True)
+    dicChampsSorted = {champ: dicChamps[champ] for champ, _ in winratesPerChampion}
+    print(dicChampsSorted)
+
+    # Apartado de resultados por tipo de campeón
+    champTags = database.getChampionTags()
+    winratesPerTag = {}
+    for champ, stats in dicChamps.items():
+        tags = champTags.get(champ, [])
+        for tag in tags:
+            if tag not in winratesPerTag:
+                winratesPerTag[tag] = [0, 0]
+            winratesPerTag[tag][0] += stats[0]
+            winratesPerTag[tag][1] += stats[1]
+    print(winratesPerTag)
+
+    # Apartado de maestrías
+    champMasteries = database.getSummonerMasteries(puuid)
+    if champMasteries is None:
+        print("Este jugador no se encuentra en la base de datos")
+        api.registerSummoner(puuid)
+        champMasteries = database.getSummonerMasteries(puuid)
+        if champMasteries is None:
+            print("No ha sido posible registrar al jugador")
+            exit(-1)
+    print(champMasteries)
+
+    # Seleccionar los 5 primeros asumiendo que deben ser 2 champion AD, 2 champion AP y 1 comfort pick
+    champRating = assignPointsForPool(dicChampsSorted, winratesPerTag, champMasteries)
+    # Los que sí o sí deben entrar a la selección son los tres primeros, independientemente de cualquier otro criterio
+    ADChamps = []
+    APChamps = []
+    # Comprobamos el tipo de daño de los añadidos, lo que puede dar lugar a tres casos
+    for champion, info in champRating.items():
+        if info[0] == DamageType.Physical and len(ADChamps) < 2:
+            ADChamps.append(champion)
+        elif info[0] == DamageType.Magical and len(APChamps) < 2:
+            APChamps.append(champion)
+        elif info[0] == DamageType.Hybrid:
+            if len(ADChamps) < 2:
+                ADChamps.append(champion)
+            if len(APChamps) < 2:
+                APChamps.append(champion)
+        if len(ADChamps) == 2 and len(APChamps) == 2:
+            break
+    # CASO 1: Si hay dos repetidos en ambos diccionarios, entonces hay que añadir tres campeones
+    selectedChamps = []
+    if ADChamps == APChamps:
+        i = 3
+        for champion, info in champRating.items():
+            if champion not in selectedChamps:
+                selectedChamps.append(champion)
+                i -= 1
+                if i <= 0:
+                    break
+
+    # CASO 2: Si hay un repetido en ambos diccionarios, entonces hay que añadir dos campeones
+    for champ in ADChamps:
+        if champ in APChamps:
+            i = 2
+            for champion, info in champRating.items():
+                if champion not in selectedChamps:
+                    selectedChamps.append(champion)
+                    i -= 1
+                    if i <= 0:
+                        break
+            break
+
+    # CASO 3: Si no hay repetidos en ambos diccionarios, entonces hay que añadir un campeón
+    flag = False
+    for champ in ADChamps:
+        if champ in APChamps:
+            flag = True
+            break
+    if not flag:
+        i = 1
+        for champion, info in champRating.items():
+            if champion not in selectedChamps:
+                selectedChamps.append(champion)
+                i -= 1
+                if i <= 0:
+                    break
+
+    i = 0
+    for selected in selectedChamps:
+        i += 1
+        print(f"Campeón {i}: {selected}")
+
+
 # FUNCIONES ESTADÍSTICAS DESCRIPTIVAS
 def definingChampPool(name, puuid, matches):
     # TODO Posible mejora: Obtener los campeones clasificados en base a la posición
@@ -559,7 +666,7 @@ def definingChampPool(name, puuid, matches):
             exit(-1)
     print(champMasteries)
 
-    # Seleccionar los 4 primeros asumiendo que deben ser 1 champion AD, 1 champion AP y 1 comfort pick
+    # Seleccionar los 5 primeros asumiendo que deben ser 2 champion AD, 2 champion AP y 1 comfort pick
     champRating = assignPointsForPool(dicChampsSorted, winratesPerTag, champMasteries)
     # Los que sí o sí deben entrar a la selección son los tres primeros, independientemente de cualquier otro criterio
     selectedChamps = list(champRating.keys())[:2]

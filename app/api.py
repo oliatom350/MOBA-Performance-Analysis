@@ -1,6 +1,6 @@
 import re
 import requests
-import database
+from app import database
 from enum import Enum
 from queue import Queue
 import time

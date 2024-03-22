@@ -25,10 +25,9 @@ CORS(app)
 #     else:
 #         return '<p>Hello, World. This is POST request</p>'
 
-
 @app.route('/')
-def testHello():
-    data = {'message': 'Hello from Flask!'}
+def userEmpty():
+    data = {'empty': 'No hay nombre de jugador'}
     return jsonify(data)
 
 
