@@ -39,9 +39,19 @@ def testUser(username):
         data = {'message': 'No existe el jugador'}
     else:
         if database.checkPlayerDB(puuid):
+            champMasteries = database.getSummonerMasteries(puuid)
             data = {'puuid': puuid,
                     'name': username,
-                    'searchTime': time.asctime()}
+                    'searchTime': time.asctime(),
+                    'masteries': {}}
+            if champMasteries is None:
+                data['masteries'] = 'No se han recuperado correctamente las maestrías'
+            for mastery in champMasteries:
+                champName = database.getChampionByKey(mastery['championId'])
+                if champName is None:
+                    data['masteries'][mastery['championId']] = mastery['championPoints']
+                else:
+                    data['masteries'][champName] = mastery['championPoints']
         else:
             data = {'message': 'No existe el jugador dentro de la BBDD'}
     return jsonify(data)
