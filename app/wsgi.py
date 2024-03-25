@@ -51,6 +51,10 @@ def testUser(username):
                     data['masteries'][mastery['championId']] = mastery['championPoints']
                 else:
                     data['masteries'][champName] = mastery['championPoints']
+            iconAndLevelDict = database.getSummonerIconAndLevel(puuid)
+            if iconAndLevelDict is not None:
+                data['profileIconId'] = iconAndLevelDict['profileIconId']
+                data['summonerLevel'] = iconAndLevelDict['summonerLevel']
         else:
             data = {'message': 'No existe el jugador dentro de la BBDD'}
     return jsonify(data)

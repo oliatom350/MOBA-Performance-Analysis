@@ -219,3 +219,11 @@ def getSummonerMasteries(puuid):
             return data['championMasteries']
     return None
 
+
+def getSummonerIconAndLevel(puuid):
+    data = dbSummoner.find_one({'puuid': puuid})
+    if data:
+        if 'profileIconId' in data and 'summonerLevel':
+            return {'profileIconId': data['profileIconId'],
+                    'summonerLevel': data['summonerLevel']}
+    return None
