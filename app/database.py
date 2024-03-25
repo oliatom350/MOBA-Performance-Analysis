@@ -205,10 +205,10 @@ def getChampionByKey(key):
     return None
 
 
-def getChampionNameById(iD):
-    champion = dbChampions.find_one({'data.id': iD})
+def getChampionIdByKey(key):
+    champion = dbChampions.find_one({'data.key': str(key)})
     if champion:
-        return champion['data']['name']
+        return champion['data']['id']
     return None
 
 

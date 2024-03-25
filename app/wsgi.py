@@ -47,10 +47,17 @@ def testUser(username):
                 data['masteries'] = 'No se han recuperado correctamente las maestrías'
             for mastery in champMasteries:
                 champName = database.getChampionByKey(mastery['championId'])
-                if champName is None:
+                champId = database.getChampionIdByKey(mastery['championId'])
+                if champName is None and champId is None:
                     data['masteries'][mastery['championId']] = mastery['championPoints']
+                elif champName is None:
+                    data['masteries'][champId] = {'championPoints': mastery['championPoints'],
+                                                  'championLevel': mastery['championLevel']}
                 else:
-                    data['masteries'][champName] = mastery['championPoints']
+                    data['masteries'][champName] = {'championPoints': mastery['championPoints'],
+                                                    'championLevel': mastery['championLevel'],
+                                                    'champId': champId}
+
             iconAndLevelDict = database.getSummonerIconAndLevel(puuid)
             if iconAndLevelDict is not None:
                 data['profileIconId'] = iconAndLevelDict['profileIconId']
