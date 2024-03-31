@@ -1,6 +1,6 @@
 import time
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, make_response
 from flask_cors import CORS
 from markupsafe import escape
 
@@ -27,7 +27,7 @@ CORS(app)
 
 @app.route('/')
 def userEmpty():
-    data = {'empty': 'No hay nombre de jugador'}
+    data = {'message': 'Por favor, introduce un nombre de usuario.'}
     return jsonify(data)
 
 
@@ -36,6 +36,7 @@ def testUser(username):
     puuid = api.getSummonerPUUID(username)
     if puuid is None:
         data = {'message': 'No existe el jugador'}
+        return make_response(jsonify(data), 404)
     else:
         if database.checkPlayerDB(puuid):
             champMasteries = database.getSummonerMasteries(puuid)
@@ -62,9 +63,21 @@ def testUser(username):
             if iconAndLevelDict is not None:
                 data['profileIconId'] = iconAndLevelDict['profileIconId']
                 data['summonerLevel'] = iconAndLevelDict['summonerLevel']
+            elo = database.getSummonerElo(puuid)
+            if elo is not None:
+                data['elo'] = elo
         else:
             data = {'message': 'No existe el jugador dentro de la BBDD'}
+            return make_response(jsonify(data), 404)
     return jsonify(data)
+
+
+@app.route('/<username>/update')
+def updateUser(username):
+    if api.registerSummoner(username) is None:
+        return {'error': {}}
+    else:
+        return {'success': {}}
 
 
 if __name__ == '__main__':

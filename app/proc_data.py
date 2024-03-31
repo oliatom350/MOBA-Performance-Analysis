@@ -22,16 +22,25 @@ def processPlayer(name):
     matches = getAllPlayerMatches(name, puuid)
     if matches:
         # getMatchesPosition(name, puuid, matches)
+
         # getPlayerKDA(name, puuid, matches)
+
         # getPlayerWinrate(name, puuid, matches)
-        # getMeanDuration(name, puuid, matches)
+
         # definingChampPool(name, puuid, matches)
-        definingChampPool2(name, puuid, matches)
+        # definingChampPool2(name, puuid, matches)
+
         # getResultsWithPartner(puuid, matches)
+
         # getWinrateAgainstChampions(puuid, matches)
+
         # getWinrateAlongsideChampions(puuid, matches)
+
         # getQuickPlayerInfo(name, puuid, matches)
-        # drawKillsHeatmaps(puuid, matches)
+        # Se podría incluir la función getMeanDuration dentro de getQuickPlayerInfo
+        # getMeanDuration(name, puuid, matches)
+
+        drawKillsHeatmaps(puuid, matches)
 
 
 def getReferenceData(position):

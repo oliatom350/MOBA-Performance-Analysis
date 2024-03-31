@@ -1,4 +1,4 @@
-from app import api, database, proc_data
+from app import api, proc_data
 
 if __name__ == '__main__':
     # database.clearCollection(0)

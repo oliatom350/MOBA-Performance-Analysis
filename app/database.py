@@ -227,3 +227,11 @@ def getSummonerIconAndLevel(puuid):
             return {'profileIconId': data['profileIconId'],
                     'summonerLevel': data['summonerLevel']}
     return None
+
+
+def getSummonerElo(puuid):
+    data = dbSummoner.find_one({'puuid': puuid})
+    if data:
+        if 'elo' in data:
+            return data['elo']
+    return None
