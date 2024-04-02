@@ -117,7 +117,6 @@ def getChampionPool(username):
 
 @app.route('/<username>/partnersResults')
 def getPartnersResults(username):
-    # TODO
     puuid = api.getSummonerPUUID(username)
     matches = database.getAllPlayersGames(puuid)
     partnersResults = proc_data.getResultsWithPartner(puuid, matches)
@@ -126,7 +125,6 @@ def getPartnersResults(username):
 
 @app.route('/<username>/winrateVsChamps')
 def getWinrateAgainstChampions(username):
-    # TODO
     puuid = api.getSummonerPUUID(username)
     matches = database.getAllPlayersGames(puuid)
     winrateVsChamps = proc_data.getWinrateAgainstChampions(puuid, matches)
@@ -135,7 +133,6 @@ def getWinrateAgainstChampions(username):
 
 @app.route('/<username>/winrateWChamps')
 def getWinrateAlongsideChampions(username):
-    # TODO
     puuid = api.getSummonerPUUID(username)
     matches = database.getAllPlayersGames(puuid)
     winrateWChamps = proc_data.getWinrateAlongsideChampions(puuid, matches)
@@ -152,7 +149,7 @@ def getQuickPlayerData(username):
 
 
 @app.route('/<username>/heatmaps')
-def getQuickPlayerData(username):
+def getHeatmapsImgs(username):
     # TODO
     puuid = api.getSummonerPUUID(username)
     matches = database.getAllPlayersGames(puuid)

@@ -32,7 +32,7 @@ def processPlayer(name):
 
         # getResultsWithPartner(puuid, matches)
 
-        # getWinrateAgainstChampions(puuid, matches)
+        getWinrateAgainstChampions(puuid, matches)
 
         # getWinrateAlongsideChampions(puuid, matches)
 
@@ -40,7 +40,7 @@ def processPlayer(name):
         # Se podría incluir la función getMeanDuration dentro de getQuickPlayerInfo
         # getMeanDuration(name, puuid, matches)
 
-        drawKillsHeatmaps(puuid, matches)
+        # drawKillsHeatmaps(puuid, matches)
 
 
 def getReferenceData(position):
@@ -1002,6 +1002,7 @@ def getResultsWithPartner(puuid, matches):
     for companion in dicPartners.values():
         print(
             f'{companion[0]}: {companion[1]} victorias y {companion[2]} derrotas, haciendo un winrate de {round((companion[1] / (companion[1] + companion[2])) * 100, 2)}%')
+    return dicPartners
 
 
 def getWinrateAgainstChampions(puuid, matches):
@@ -1150,11 +1151,15 @@ def getWinrateAgainstChampions(puuid, matches):
             totalCounted += totalWins + totalLoses
             print(
                 f"\tEsto hace un balance de {totalWins} victorias y {totalLoses} derrotas contra {enemy}({pos}), con un rendimiento de {round(totalWins / (totalWins + totalLoses) * 100, 2)} %\n")
+            vsChamps[pos][enemy]['totalWins'] = totalWins
+            vsChamps[pos][enemy]['totalLoses'] = totalLoses
+            vsChamps[pos][enemy]['winrate'] = round(totalWins / (totalWins + totalLoses) * 100, 2)
         if pos != 'Support':
             print("\n")
     print(f'TOTAL ANALIZADAS: {totalCounted}')
-    # TODO Los remakes no se analizan puesto que sus datos son alterados y dan lugar a incoherencias
+    # Los remakes no se analizan puesto que sus datos son alterados y dan lugar a incoherencias
     print(f'TOTAL REMAKES: {remakes}')
+    return vsChamps
 
 
 def getPlayerPosition(info):
@@ -1235,9 +1240,13 @@ def getWinrateAlongsideChampions(puuid, matches):
                     f'\t{partner}({pos}): {stats["wins"]} victorias y {stats["loses"]} derrotas, haciendo un total de {winrate} %')
             print(
                 f"\tEsto hace un balance de {totalWins} victorias y {totalLoses} derrotas con {partner} en todas sus posiciones, con un rendimiento de {round(totalWins / (totalWins + totalLoses) * 100, 2)} %\n")
+            withChamps[playerChampion]['totalWins'] = totalWins
+            withChamps[playerChampion]['totalLoses'] = totalLoses
+            withChamps[playerChampion]['winrate'] = round(totalWins / (totalWins + totalLoses) * 100, 2)
         print("\n")
     print(f'TOTAL ANALIZADAS: {len(matches) - remakes}')
     print(f'TOTAL REMAKES: {remakes}')
+    return withChamps
 
 
 def getSeasonAndPatch(match):
@@ -1254,7 +1263,7 @@ def getSeasonAndPatch(match):
 def getQuickPlayerInfo(name, puuid, matches):
     mostPlayedPosition = getMostPlayedPosition(name, puuid, matches)
     # data = getReferenceData(mostPlayedPosition)
-
+    resultingData = {}
     #  1- Función de daño a objetivos y/o torretas promedio de las 10 últimas partidas jugadas
     # proDmgToObjectivesTurretsData = dmgToObjectivesTurrets(data['puuid'], data['matches'], mostPlayedPosition, {})
     # pointsDmgToObjectivesTurrets = dmgToObjectivesTurrets(puuid, matches, mostPlayedPosition, proDmgToObjectivesTurretsData)
@@ -1280,6 +1289,7 @@ def getQuickPlayerInfo(name, puuid, matches):
     # proVision = getVisionPerMin(data['puuid'], data['matches'], mostPlayedPosition, {})
     # playerVision = getVisionPerMin(puuid, matches, mostPlayedPosition, proVision)
     # print(playerVision)
+    return resultingData
 
 
 def dmgToObjectivesTurrets(puuid, matches, position, proData):
