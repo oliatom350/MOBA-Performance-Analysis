@@ -1,4 +1,6 @@
+import base64
 import time
+from io import BytesIO
 
 from flask import Flask, jsonify, make_response
 from flask_cors import CORS
@@ -141,7 +143,6 @@ def getWinrateAlongsideChampions(username):
 
 @app.route('/<username>/playerData')
 def getQuickPlayerData(username):
-    # TODO
     puuid = api.getSummonerPUUID(username)
     matches = database.getAllPlayersGames(puuid)
     playerData = proc_data.getQuickPlayerInfo(username, puuid, matches)
@@ -150,11 +151,10 @@ def getQuickPlayerData(username):
 
 @app.route('/<username>/heatmaps')
 def getHeatmapsImgs(username):
-    # TODO
     puuid = api.getSummonerPUUID(username)
     matches = database.getAllPlayersGames(puuid)
     images = proc_data.drawKillsHeatmaps(puuid, matches)
-    return images
+    return jsonify(images)
 
 
 if __name__ == '__main__':
