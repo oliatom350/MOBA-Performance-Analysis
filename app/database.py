@@ -235,3 +235,8 @@ def getSummonerElo(puuid):
         if 'elo' in data:
             return data['elo']
     return None
+
+
+def getAllPlayers():
+    data = dbSummoner.find()
+    return data

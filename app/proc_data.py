@@ -192,11 +192,11 @@ def getMatchesPosition(name, puuid, matches):
     )
 
     dicPos = {
-        'TOP': {'Normal': topNorm, 'SoloDuo': topSolo, 'Flex': topFlex},
-        'JUNGLE': {'Normal': jungleNorm, 'SoloDuo': jungleSolo, 'Flex': jungleFlex},
-        'MIDDLE': {'Normal': midNorm, 'SoloDuo': midSolo, 'Flex': midFlex},
-        'BOTTOM': {'Normal': adcNorm, 'SoloDuo': adcSolo, 'Flex': adcFlex},
-        'UTILITY': {'Normal': suppNorm, 'SoloDuo': suppSolo, 'Flex': suppFlex}
+        'TOP': {'Normal': topNorm, 'SoloDuo': topSolo, 'Flex': topFlex, 'Total': (topNorm + topSolo + topFlex)},
+        'JUNGLE': {'Normal': jungleNorm, 'SoloDuo': jungleSolo, 'Flex': jungleFlex, 'Total': (jungleNorm + jungleSolo + jungleFlex)},
+        'MIDDLE': {'Normal': midNorm, 'SoloDuo': midSolo, 'Flex': midFlex, 'Total': (midNorm + midSolo + midFlex)},
+        'BOTTOM': {'Normal': adcNorm, 'SoloDuo': adcSolo, 'Flex': adcFlex, 'Total': (adcNorm + adcSolo + adcFlex)},
+        'UTILITY': {'Normal': suppNorm, 'SoloDuo': suppSolo, 'Flex': suppFlex, 'Total': (suppNorm + suppSolo + suppFlex)}
     }
 
     return dicPos
