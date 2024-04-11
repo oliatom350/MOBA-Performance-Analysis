@@ -19,8 +19,8 @@ class DamageType(Enum):
     Hybrid = 3
 
 
-def processPlayer(name):
-    puuid = api.getSummonerPUUID(name)
+def processPlayer(name, riotId):
+    puuid = api.getSummonerPUUID(name, riotId)
     matches = getAllPlayerMatches(name, puuid)
     if matches:
         # getMatchesPosition(name, puuid, matches)
@@ -57,7 +57,7 @@ def updatePlayerGames(name, puuid, count):
     if database.checkPlayerDB(puuid):
         limitDate = database.getLastGame(puuid)
     else:
-        api.registerSummoner(name)
+        api.registerSummonerByPUUID(puuid)
         limitDate = 0
     endTime = round(time.time())
     matches = {}
@@ -599,7 +599,7 @@ def definingChampPool2(name, puuid, matches):
     champMasteries = database.getSummonerMasteries(puuid)
     if champMasteries is None:
         print("Este jugador no se encuentra en la base de datos")
-        api.registerSummoner(puuid)
+        api.registerSummonerByPUUID(puuid)
         champMasteries = database.getSummonerMasteries(puuid)
         if champMasteries is None:
             print("No ha sido posible registrar al jugador")
@@ -647,16 +647,19 @@ def definingChampPool2(name, puuid, matches):
         if champ not in selectedChamps.keys():
             selectedChamps[champ] = info
             break
-
+    finalChamps = {'AD': [], 'AP': [], 'Comfort': []}
     # Imprimir los campeones seleccionados
     for i, selected in enumerate(selectedChamps.keys()):
         if i < 2:
             print(f"Campeón AD {i%2 + 1}: {selected}")
+            finalChamps['AD'].append(selected)
         elif i < 4:
             print(f"Campeón AP {i%2 + 1}: {selected}")
+            finalChamps['AP'].append(selected)
         else:
             print(f"Campeón comfort: {selected}")
-    return selectedChamps
+            finalChamps['Comfort'].append(selected)
+    return finalChamps
 
 
 # FUNCIONES ESTADÍSTICAS DESCRIPTIVAS
@@ -698,7 +701,7 @@ def definingChampPool(name, puuid, matches):
     champMasteries = database.getSummonerMasteries(puuid)
     if champMasteries is None:
         print("Este jugador no se encuentra en la base de datos")
-        api.registerSummoner(puuid)
+        api.registerSummonerByPUUID(puuid)
         champMasteries = database.getSummonerMasteries(puuid)
         if champMasteries is None:
             print("No ha sido posible registrar al jugador")
@@ -1681,7 +1684,7 @@ def getProPlayersHistory():
         # Si no existe, entonces pedimos las primeras 20 partidas de tipo Ranked a la API y obtenemos sus datos de referencia
         else:
             # Registramos al proPlayer
-            api.registerSummoner(proPUUID)
+            api.registerSummonerByPUUID(proPUUID)
             proMatches = api.getRankedGames(proPUUID, 0, round(time.time()), 20)
         if 0 <= len(proMatches) < 20:
             proNewMatches = api.getRankedGames(proPUUID, 0, round(time.time()), 20)
@@ -1730,7 +1733,7 @@ def getProPlayersHistoryByPosition(position):
     proPlayers = api.getProPlayers()
     for pro in proPlayers:
         proPUUID = api.getSummonerPUUIDbySummonerId(pro['summonerId'])
-        proName = pro['summonerName']
+        proName = api.getSummonerName(proPUUID)
         print(f'Procesando al jugador {proName}')
         # Si el proPlayer existe en nuestra BBDD, entonces recuperamos sus partidas y las analizamos para obtener los datos de referencia
         if database.checkPlayerDB(proPUUID):
@@ -1738,7 +1741,7 @@ def getProPlayersHistoryByPosition(position):
         # Si no existe, entonces pedimos las primeras 20 partidas de tipo Ranked a la API y obtenemos sus datos de referencia
         else:
             # Registramos al proPlayer
-            api.registerSummoner(proPUUID)
+            api.registerSummonerByPUUID(proPUUID)
             proMatches = api.getRankedGames(proPUUID, 0, round(time.time()), 20)
         if 0 <= len(proMatches) < 20:
             proNewMatches = api.getRankedGames(proPUUID, 0, round(time.time()), 20)

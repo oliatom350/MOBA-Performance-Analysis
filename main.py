@@ -6,16 +6,16 @@ if __name__ == '__main__':
     # database.clearCollection(2)
 
     api.updateChampions()
-    summoner_name = input("Introduce tu nombre de usuario: ")
-    puuidInicial = api.getSummonerPUUID(summoner_name)
+    summonerName = input("Introduce tu nombre de usuario: ")
+    summonerTag = input("Introduce tu riotID: ")
+    puuidInicial = api.getSummonerPUUID(summonerName, summonerTag)
     if puuidInicial is None:
-        print(f'El jugador {summoner_name} no existe')
+        print(f'El jugador {summonerName} no existe')
     else:
         # api.getMatches(puuidInicial)
         # proc_data.processPlayer(summoner_name)
         # database.getQueues()
+        # print(api.registerSummonerByRiotId(summonerName, summonerTag))
+        # print(api.registerSummonerByPUUID(puuidInicial))
         for player in database.getAllPlayers():
-            if player["name"] != "":
-                api.registerSummoner(player["name"])
-            else:
-                api.registerSummoner(player["puuid"])
+            api.registerSummonerByPUUID(player["puuid"])

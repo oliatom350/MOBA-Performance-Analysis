@@ -13,22 +13,20 @@ class QueueType(Enum):
     Ranked = 2
 
 
-def registerSummoner(summoner):
-    # Endpoint de la API para obtener información del invocador por nombre (su longitud máxima es 16)
-    # y por puuid (si la longitud es de exactamente 78)
-    if len(summoner) == 78:
-        summonerPUUID_api_url = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{summoner}'
-        response = doRequest(summonerPUUID_api_url)
-    else:
-        summonerName_api_url = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner}'
-        response = doRequest(summonerName_api_url)
-
+def registerSummonerByPUUID(puuid):
+    name = getSummonerName(puuid)
+    riotId = getRiotId(puuid)
+    summonerPUUID_api_url = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid}'
+    response = doRequest(summonerPUUID_api_url)
     if response is None:
         return None
-    name = response["name"]
-    puuid = response["puuid"]
-    champion_mastery_url = f'https://euw1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}'
+    response["name"] = name
+    response["riotId"] = riotId
+    return registerSummoner(name, response, puuid)
 
+
+def registerSummoner(summoner, response, puuid):
+    champion_mastery_url = f'https://euw1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}'
     # Realiza la solicitud a la API de Champion-MasteryV4 de Riot Games
     response2 = doRequest(champion_mastery_url)
     if response2 is None:
@@ -38,7 +36,6 @@ def registerSummoner(summoner):
         champion_mastery.pop("summonerId", None)
     response["championMasteries"] = response2
     response["lastGame"] = 0
-
     summonerID = getSummonerId(puuid)
     if summonerID is None:
         return None
@@ -46,7 +43,7 @@ def registerSummoner(summoner):
     if elo is None:
         return None
     response["elo"] = elo
-    return database.insertPlayerDB(name, puuid, response)
+    return database.insertPlayerDB(summoner, puuid, response)
 
 
 def updateChampions():
@@ -100,8 +97,7 @@ def getMatches(puuid):
     puuidQueue.put(puuid)
     while not len(puuidQueue.queue) == 0:
         puuidActual = puuidQueue.get()
-        nameActual = getSummonerName(puuidActual)
-        newSummoner = registerSummoner(nameActual)
+        newSummoner = registerSummonerByPUUID(puuidActual)
         if newSummoner is None:
             continue
         newPlayers = []
@@ -211,15 +207,23 @@ def getRankedGames(puuid, limitDate, endTime, count):
 
 
 def getSummonerName(puuidActual):
-    summonerPUUIDAPI = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuidActual}'
+    summonerPUUIDAPI = f'https://europe.api.riotgames.com/riot/account/v1/accounts/by-puuid/{puuidActual}'
     data = doRequest(summonerPUUIDAPI)
     if data is None:
         return None
-    return data["name"]
+    return data["gameName"]
 
 
-def getSummonerPUUID(summonerName):
-    summonerNameAPI = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summonerName}'
+def getRiotId(puuid):
+    summonerPUUIDAPI = f'https://europe.api.riotgames.com/riot/account/v1/accounts/by-puuid/{puuid}'
+    data = doRequest(summonerPUUIDAPI)
+    if data is None:
+        return None
+    return data["tagLine"]
+
+
+def getSummonerPUUID(summonerName, summonerTag):
+    summonerNameAPI = f'https://europe.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{summonerName}/{summonerTag}'
     data = doRequest(summonerNameAPI)
     if data is None:
         return None

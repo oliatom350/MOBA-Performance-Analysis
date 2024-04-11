@@ -29,13 +29,13 @@ CORS(app)
 
 @app.route('/')
 def userEmpty():
-    data = {'message': 'Por favor, introduce un nombre de usuario.'}
+    data = {'message': 'Por favor, introduce un nombre de usuario y un riotID.'}
     return jsonify(data)
 
 
-@app.route('/<username>')
-def testUser(username):
-    puuid = api.getSummonerPUUID(username)
+@app.route('/<username>/<riotId>')
+def testUser(username, riotId):
+    puuid = api.getSummonerPUUID(username, riotId)
     if puuid is None:
         data = {'message': 'No existe el jugador'}
         return make_response(jsonify(data), 404)
@@ -44,6 +44,7 @@ def testUser(username):
             champMasteries = database.getSummonerMasteries(puuid)
             data = {'puuid': puuid,
                     'name': username,
+                    'riotId': riotId,
                     'searchTime': time.asctime(),
                     'masteries': {}}
             if champMasteries is None:
@@ -74,10 +75,10 @@ def testUser(username):
     return jsonify(data)
 
 
-@app.route('/<username>/update')
-def updateUser(username):
-    puuid = api.getSummonerPUUID(username)
-    registered = api.registerSummoner(username)
+@app.route('/<username>/<riotId>/update')
+def updateUser(username, riotId):
+    puuid = api.getSummonerPUUID(username, riotId)
+    registered = api.registerSummonerByPUUID(puuid)
     if registered is None:
         return {'error': {}}
     else:
@@ -85,73 +86,73 @@ def updateUser(username):
         return {'success': {}}
 
 
-@app.route('/<username>/matchesPosition')
-def getMatchesPosition(username):
-    puuid = api.getSummonerPUUID(username)
+@app.route('/<username>/<riotId>/matchesPosition')
+def getMatchesPosition(username, riotId):
+    puuid = api.getSummonerPUUID(username, riotId)
     matches = database.getAllPlayersGames(puuid)
     dicPos = proc_data.getMatchesPosition(username, puuid, matches)
     return dicPos
 
 
-@app.route('/<username>/KDA')
-def getPlayerKDA(username):
-    puuid = api.getSummonerPUUID(username)
+@app.route('/<username>/<riotId>/KDA')
+def getPlayerKDA(username, riotId):
+    puuid = api.getSummonerPUUID(username, riotId)
     matches = database.getAllPlayersGames(puuid)
     dicKDA = proc_data.getPlayerKDA(username, puuid, matches)
     return dicKDA
 
 
-@app.route('/<username>/winrate')
-def getPlayerWinrate(username):
-    puuid = api.getSummonerPUUID(username)
+@app.route('/<username>/<riotId>/winrate')
+def getPlayerWinrate(username, riotId):
+    puuid = api.getSummonerPUUID(username, riotId)
     matches = database.getAllPlayersGames(puuid)
     dicChamps = proc_data.getPlayerWinrate(username, puuid, matches)
     return dicChamps
 
 
-@app.route('/<username>/championPool')
-def getChampionPool(username):
-    puuid = api.getSummonerPUUID(username)
+@app.route('/<username>/<riotId>/championPool')
+def getChampionPool(username, riotId):
+    puuid = api.getSummonerPUUID(username, riotId)
     matches = database.getAllPlayersGames(puuid)
     selectedChamps = proc_data.definingChampPool2(username, puuid, matches)
     return selectedChamps
 
 
-@app.route('/<username>/partnersResults')
-def getPartnersResults(username):
-    puuid = api.getSummonerPUUID(username)
+@app.route('/<username>/<riotId>/partnersResults')
+def getPartnersResults(username, riotId):
+    puuid = api.getSummonerPUUID(username, riotId)
     matches = database.getAllPlayersGames(puuid)
     partnersResults = proc_data.getResultsWithPartner(puuid, matches)
     return partnersResults
 
 
-@app.route('/<username>/winrateVsChamps')
-def getWinrateAgainstChampions(username):
-    puuid = api.getSummonerPUUID(username)
+@app.route('/<username>/<riotId>/winrateVsChamps')
+def getWinrateAgainstChampions(username, riotId):
+    puuid = api.getSummonerPUUID(username, riotId)
     matches = database.getAllPlayersGames(puuid)
     winrateVsChamps = proc_data.getWinrateAgainstChampions(puuid, matches)
     return winrateVsChamps
 
 
-@app.route('/<username>/winrateWChamps')
-def getWinrateAlongsideChampions(username):
-    puuid = api.getSummonerPUUID(username)
+@app.route('/<username>/<riotId>/winrateWChamps')
+def getWinrateAlongsideChampions(username, riotId):
+    puuid = api.getSummonerPUUID(username, riotId)
     matches = database.getAllPlayersGames(puuid)
     winrateWChamps = proc_data.getWinrateAlongsideChampions(puuid, matches)
     return winrateWChamps
 
 
-@app.route('/<username>/playerData')
-def getQuickPlayerData(username):
-    puuid = api.getSummonerPUUID(username)
+@app.route('/<username>/<riotId>/playerData')
+def getQuickPlayerData(username, riotId):
+    puuid = api.getSummonerPUUID(username, riotId)
     matches = database.getAllPlayersGames(puuid)
     playerData = proc_data.getQuickPlayerInfo(username, puuid, matches)
     return playerData
 
 
-@app.route('/<username>/heatmaps')
-def getHeatmapsImgs(username):
-    puuid = api.getSummonerPUUID(username)
+@app.route('/<username>/<riotId>/heatmaps')
+def getHeatmapsImgs(username, riotId):
+    puuid = api.getSummonerPUUID(username, riotId)
     matches = database.getAllPlayersGames(puuid)
     images = proc_data.drawKillsHeatmaps(puuid, matches)
     return jsonify(images)
