@@ -327,12 +327,12 @@ def getPlayerKDA(name, puuid, matches):
             print(f"No se han obtenido resultados sobre partidas solo/duo")
         if totalMatchFlex != 0:
             print(
-                f"Flex: ({round(killsNormal / totalMatchFlex, 2)} / {round(deathsNormal / totalMatchFlex, 2)} / {round(assistsNormal / totalMatchFlex, 2)}): "
-                f"{calculateKDA(killsFlex, deathsFlex, assistsFlex)}")
+                f"Flex: ({round(killsFlex / totalMatchFlex, 2)} / {round(deathsFlex / totalMatchFlex, 2)} / {round(deathsFlex / totalMatchFlex, 2)}): "
+                f"{calculateKDA(killsFlex, deathsFlex, deathsFlex)}")
             dicKDA['kdaFlex'] = {
-                'kills': round(killsNormal / totalMatchFlex, 2),
-                'deaths': round(deathsNormal / totalMatchFlex, 2),
-                'assists': round(assistsNormal / totalMatchFlex, 2),
+                'kills': round(killsFlex / totalMatchFlex, 2),
+                'deaths': round(deathsFlex / totalMatchFlex, 2),
+                'assists': round(deathsFlex / totalMatchFlex, 2),
                 'kda': calculateKDA(killsFlex, deathsFlex, assistsFlex)
             }
         else:
@@ -344,6 +344,7 @@ def getPlayerKDA(name, puuid, matches):
                 f"{champ}: ({round(dicChamps[champ][0] / dicChamps[champ][3], 2)} / {round(dicChamps[champ][1] / dicChamps[champ][3], 2)} / {round(dicChamps[champ][2] / dicChamps[champ][3], 2)}): "
                 f"{calculateKDA(dicChamps[champ][0], dicChamps[champ][1], dicChamps[champ][2])} en {dicChamps[champ][3]} partidas jugadas")
             dicKDA['kdaChamps'][champ] = {
+                'champId': database.getChampionIdByName(champ),
                 'kills': round(dicChamps[champ][0] / dicChamps[champ][3], 2),
                 'deaths': round(dicChamps[champ][1] / dicChamps[champ][3], 2),
                 'assists': round(dicChamps[champ][2] / dicChamps[champ][3], 2),
