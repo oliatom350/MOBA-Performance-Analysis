@@ -652,22 +652,49 @@ def definingChampPool2(name, puuid, matches):
                 break
 
     # Falta introducir el quinto y último campeón
+    comfortChamp = ''
     for champ, info in champRating.items():
         if champ not in selectedChamps.keys():
             selectedChamps[champ] = info
+            comfortChamp = champ
             break
     finalChamps = {'AD': {}, 'AP': {}, 'Comfort': {}}
     # Imprimir los campeones seleccionados
-    for i, selected in enumerate(selectedChamps.keys()):
-        if i < 2:
-            print(f"Campeón AD {i%2 + 1}: {selected}")
-            finalChamps['AD'][selected] = {'champId': database.getChampionIdByName(selected)}
-        elif i < 4:
-            print(f"Campeón AP {i%2 + 1}: {selected}")
-            finalChamps['AP'][selected] = {'champId': database.getChampionIdByName(selected)}
-        else:
-            print(f"Campeón comfort: {selected}")
-            finalChamps['Comfort'][selected] = {'champId': database.getChampionIdByName(selected)}
+    for champ, champInfo in selectedChamps.items():
+        if champInfo[0] == 'Physical':
+            finalChamps['AD'][champ] = {'champId': database.getChampionIdByName(champ)}
+        elif champInfo[0] == 'Magical':
+            finalChamps['AP'][champ] = {'champId': database.getChampionIdByName(champ)}
+    finalAD = len(finalChamps['AD'].keys())
+    finalAP = len(finalChamps['AP'].keys())
+    if finalAD < 2:
+        for champ, champInfo in selectedChamps.items():
+            if champInfo[0] == 'Hybrid':
+                finalChamps['AD'][champ] = {'champId': database.getChampionIdByName(champ)}
+                if finalAD >= 2:
+                    break
+    if finalAP < 2:
+        for champ, champInfo in selectedChamps.items():
+            if champInfo[0] == 'Hybrid':
+                finalChamps['AP'][champ] = {'champId': database.getChampionIdByName(champ)}
+                if finalAP >= 2:
+                    break
+    if comfortChamp in finalChamps['AD']:
+        finalChamps['AD'].pop(comfortChamp)
+        finalChamps['Comfort'][comfortChamp] = {'champId': database.getChampionIdByName(comfortChamp)}
+    elif comfortChamp in finalChamps['AP']:
+        finalChamps['AP'].pop(comfortChamp)
+        finalChamps['Comfort'][comfortChamp] = {'champId': database.getChampionIdByName(comfortChamp)}
+    # for i, selected in enumerate(selectedChamps.keys()):
+    #     if i < 2:
+    #         print(f"Campeón AD {i%2 + 1}: {selected}")
+    #         finalChamps['AD'][selected] = {'champId': database.getChampionIdByName(selected)}
+    #     elif i < 4:
+    #         print(f"Campeón AP {i%2 + 1}: {selected}")
+    #         finalChamps['AP'][selected] = {'champId': database.getChampionIdByName(selected)}
+    #     else:
+    #         print(f"Campeón comfort: {selected}")
+    #         finalChamps['Comfort'][selected] = {'champId': database.getChampionIdByName(selected)}
     return finalChamps
 
 
