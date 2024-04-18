@@ -17,5 +17,4 @@ if __name__ == '__main__':
         # database.getQueues()
         # print(api.registerSummonerByRiotId(summonerName, summonerTag))
         # print(api.registerSummonerByPUUID(puuidInicial))
-        for player in database.getAllPlayers():
-            api.registerSummonerByPUUID(player["puuid"])
+        proc_data.processPlayer(summonerName, summonerTag)

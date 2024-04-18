@@ -30,11 +30,11 @@ def processPlayer(name, riotId):
         # getPlayerWinrate(name, puuid, matches)
 
         # definingChampPool(name, puuid, matches)
-        # definingChampPool2(name, puuid, matches)
+        definingChampPool2(name, puuid, matches)
 
         # getResultsWithPartner(puuid, matches)
 
-        getWinrateAgainstChampions(puuid, matches)
+        # getWinrateAgainstChampions(puuid, matches)
 
         # getWinrateAlongsideChampions(puuid, matches)
 
@@ -348,6 +348,7 @@ def getPlayerKDA(name, puuid, matches):
                 'kills': round(dicChamps[champ][0] / dicChamps[champ][3], 2),
                 'deaths': round(dicChamps[champ][1] / dicChamps[champ][3], 2),
                 'assists': round(dicChamps[champ][2] / dicChamps[champ][3], 2),
+                'games': dicChamps[champ][3],
                 'kda': calculateKDA(dicChamps[champ][0], dicChamps[champ][1], dicChamps[champ][2])
             }
     else:
@@ -518,13 +519,21 @@ def getPlayerWinrate(name, puuid, matches):
     else:
         print(f"No ha jugado en la posición de Support")
 
+    finalDic = {}
     print(f"\nWinrate por campeón:")
     # Se imprimen los campeones con más partidas jugadas
     for champ, stats in sorted(dicChamps.items(), key=lambda x: sum(x[1]), reverse=True):
         print(
             f"{champ}: {stats[0]} victorias de {stats[0] + stats[1]} partidas ({round(stats[0] / (stats[0] + stats[1]) * 100, 2)}%)")
+        finalDic[champ] = {
+            "champId": database.getChampionIdByName(champ),
+            "wins": stats[0],
+            "loses": stats[1],
+            "games": stats[0] + stats[1],
+            "winrate": round(round(stats[0] / (stats[0] + stats[1]), 2) * 100)
+        }
 
-    return dicChamps
+    return finalDic
 
 
 def getMeanDuration(name, puuid, matches):
@@ -575,13 +584,13 @@ def definingChampPool2(name, puuid, matches):
     # Filtramos usando como threshold 4 partidas jugadas
     poorChamps = []
     for champ, stats in dicChamps.items():
-        if sum(stats) < 4:
+        if stats["games"] < 4:
             poorChamps.append(champ)
     for champ in poorChamps:
         dicChamps.pop(champ)
 
     # Apartado de resultados por campeón
-    winratesPerChampion = [(champ, stats[0] / sum(stats)) for champ, stats in dicChamps.items()]
+    winratesPerChampion = [(champ, stats["wins"] / stats["games"]) for champ, stats in dicChamps.items()]
     winratesPerChampion = sorted(winratesPerChampion, key=lambda x: x[1], reverse=True)
     dicChampsSorted = {champ: dicChamps[champ] for champ, _ in winratesPerChampion}
 
@@ -593,8 +602,8 @@ def definingChampPool2(name, puuid, matches):
         for tag in tags:
             if tag not in winratesPerTag:
                 winratesPerTag[tag] = [0, 0]
-            winratesPerTag[tag][0] += stats[0]
-            winratesPerTag[tag][1] += stats[1]
+            winratesPerTag[tag][0] += stats["wins"]
+            winratesPerTag[tag][1] += stats["loses"]
 
     # Apartado de maestrías
     champMasteries = database.getSummonerMasteries(puuid)
@@ -608,7 +617,6 @@ def definingChampPool2(name, puuid, matches):
 
     # Seleccionar los 5 primeros asumiendo que deben ser 2 champion AD, 2 champion AP y 1 comfort pick
     champRating = assignPointsForPool(dicChampsSorted, winratesPerTag, champMasteries)
-    # print(champRating)
 
     # Clasificamos los campeones evaluados por su tipo de daño
     # TODO Eliminar info de los values, y pasar únicamente la puntuación
@@ -648,18 +656,18 @@ def definingChampPool2(name, puuid, matches):
         if champ not in selectedChamps.keys():
             selectedChamps[champ] = info
             break
-    finalChamps = {'AD': [], 'AP': [], 'Comfort': []}
+    finalChamps = {'AD': {}, 'AP': {}, 'Comfort': {}}
     # Imprimir los campeones seleccionados
     for i, selected in enumerate(selectedChamps.keys()):
         if i < 2:
             print(f"Campeón AD {i%2 + 1}: {selected}")
-            finalChamps['AD'].append(selected)
+            finalChamps['AD'][selected] = {'champId': database.getChampionIdByName(selected)}
         elif i < 4:
             print(f"Campeón AP {i%2 + 1}: {selected}")
-            finalChamps['AP'].append(selected)
+            finalChamps['AP'][selected] = {'champId': database.getChampionIdByName(selected)}
         else:
             print(f"Campeón comfort: {selected}")
-            finalChamps['Comfort'].append(selected)
+            finalChamps['Comfort'][selected] = {'champId': database.getChampionIdByName(selected)}
     return finalChamps
 
 
@@ -952,7 +960,7 @@ def assignPointsForPool(dicChamps, dicTags, champMasteries):
         champRating[champName][1] += getPointsGivenRange(champ['championPoints'], masteryRange, masteryPoints)
 
     for champ, stats in dicChamps.items():
-        winrate = (stats[0] / (stats[0] + stats[1]))
+        winrate = stats["winrate"] / 100
         champRating[champ][1] += getPointsGivenRange(winrate, champWinrateRange, champWinratePoints)
 
         tags = champTags.get(champ)
@@ -962,9 +970,9 @@ def assignPointsForPool(dicChamps, dicTags, champMasteries):
             totalTagPoints += getPointsGivenRange(tagWinrate, tagWinrateRange, tagWinratePoints)
         champRating[champ][1] += int(totalTagPoints / len(tags))
 
-        if stats[0] + stats[1] < 10:
+        if stats["games"] < 10:
             champRating[champ][1] = int(champRating[champ][1] * 0.85)
-        elif stats[0] + stats[1] > 35:
+        elif stats["games"] > 35:
             champRating[champ][1] = int(champRating[champ][1] * 1.15)
 
     # Una vez acabado el bucle, se debería ordenar el diccionario sobre el total de puntos

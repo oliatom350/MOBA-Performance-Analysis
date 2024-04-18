@@ -33,6 +33,12 @@ def userEmpty():
     return jsonify(data)
 
 
+@app.route('/<username>/')
+def testUserNotRiotID(username):
+    data = {'message': 'Introduce un nombre de usuario y un RiotID válido'}
+    return make_response(jsonify(data), 404)
+
+
 @app.route('/<username>/<riotId>')
 def testUser(username, riotId):
     puuid = api.getSummonerPUUID(username, riotId)
