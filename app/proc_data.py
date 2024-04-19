@@ -30,9 +30,9 @@ def processPlayer(name, riotId):
         # getPlayerWinrate(name, puuid, matches)
 
         # definingChampPool(name, puuid, matches)
-        definingChampPool2(name, puuid, matches)
+        # definingChampPool2(name, puuid, matches)
 
-        # getResultsWithPartner(puuid, matches)
+        getResultsWithPartner(puuid, matches)
 
         # getWinrateAgainstChampions(puuid, matches)
 
@@ -1043,10 +1043,12 @@ def getResultsWithPartner(puuid, matches):
     nonPartners = [puuid for puuid, partner in dicPartners.items() if partner[1] + partner[2] < 3]
     for stranger in nonPartners:
         dicPartners.pop(stranger)
-    for companion in dicPartners.values():
+    finalPartners = {}
+    for companionPUUID, companion in dicPartners.items():
         print(
             f'{companion[0]}: {companion[1]} victorias y {companion[2]} derrotas, haciendo un winrate de {round((companion[1] / (companion[1] + companion[2])) * 100, 2)}%')
-    return dicPartners
+        finalPartners[companion[0]] = {'games': companion[1] + companion[2], 'wins': companion[1], 'loses': companion[2], 'winrate': round((companion[1] / (companion[1] + companion[2])) * 100, 2), 'icon': database.getSummonerIconAndLevel(companionPUUID)['profileIconId']}
+    return finalPartners
 
 
 def getWinrateAgainstChampions(puuid, matches):
