@@ -1064,6 +1064,7 @@ def getWinrateAgainstChampions(puuid, matches):
     vsChampsAdc = {}
     vsChampsSup = {}
 
+    totalCounted = 0
     remakes = 0
     # Recorremos las partidas del diccionario obteniendo la información del jugador en cada una
     for match in matches.values():
@@ -1098,75 +1099,95 @@ def getWinrateAgainstChampions(puuid, matches):
             # Insertamos los resultados en el diccionario correspondiente
             if rivalChamp not in vsChampsTop:
                 vsChampsTop[rivalChamp] = {"champId": database.getChampionIdByName(rivalChamp), "results": {}}
-            if ownChamp not in vsChampsTop[rivalChamp]:
+            if ownChamp not in vsChampsTop[rivalChamp]['results']:
                 if win:
                     vsChampsTop[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 1, "loses": 0}
+                    totalCounted += 1
                 else:
                     vsChampsTop[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 0, "loses": 1}
+                    totalCounted += 1
             else:
                 if win:
                     vsChampsTop[rivalChamp]['results'][ownChamp]["wins"] += 1
+                    totalCounted += 1
                 else:
                     vsChampsTop[rivalChamp]['results'][ownChamp]["loses"] += 1
+                    totalCounted += 1
 
         elif lane == "JUNGLE":
             if rivalChamp not in vsChampsJgl:
                 vsChampsJgl[rivalChamp] = {"champId": database.getChampionIdByName(rivalChamp), "results": {}}
-            if ownChamp not in vsChampsJgl[rivalChamp]:
+            if ownChamp not in vsChampsJgl[rivalChamp]['results']:
                 if win:
                     vsChampsJgl[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 1, "loses": 0}
+                    totalCounted += 1
                 else:
                     vsChampsJgl[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 0, "loses": 1}
+                    totalCounted += 1
             else:
                 if win:
                     vsChampsJgl[rivalChamp]['results'][ownChamp]["wins"] += 1
+                    totalCounted += 1
                 else:
                     vsChampsJgl[rivalChamp]['results'][ownChamp]["loses"] += 1
+                    totalCounted += 1
 
         elif lane == "MIDDLE":
             if rivalChamp not in vsChampsMid:
                 vsChampsMid[rivalChamp] = {"champId": database.getChampionIdByName(rivalChamp), "results": {}}
-            if ownChamp not in vsChampsMid[rivalChamp]:
+            if ownChamp not in vsChampsMid[rivalChamp]['results']:
                 if win:
                     vsChampsMid[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 1, "loses": 0}
+                    totalCounted += 1
                 else:
                     vsChampsMid[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 0, "loses": 1}
+                    totalCounted += 1
             else:
                 if win:
                     vsChampsMid[rivalChamp]['results'][ownChamp]["wins"] += 1
+                    totalCounted += 1
                 else:
                     vsChampsMid[rivalChamp]['results'][ownChamp]["loses"] += 1
+                    totalCounted += 1
 
         elif lane == "BOTTOM":
             if rivalChamp not in vsChampsAdc:
                 vsChampsAdc[rivalChamp] = {"champId": database.getChampionIdByName(rivalChamp), "results": {}}
-            if ownChamp not in vsChampsAdc[rivalChamp]:
+            if ownChamp not in vsChampsAdc[rivalChamp]['results']:
                 if win:
                     vsChampsAdc[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 1, "loses": 0}
+                    totalCounted += 1
                 else:
                     vsChampsAdc[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 0, "loses": 1}
+                    totalCounted += 1
             else:
                 if win:
                     vsChampsAdc[rivalChamp]['results'][ownChamp]["wins"] += 1
+                    totalCounted += 1
                 else:
                     vsChampsAdc[rivalChamp]['results'][ownChamp]["loses"] += 1
+                    totalCounted += 1
 
         elif lane == "UTILITY":
             if rivalChamp not in vsChampsSup:
                 vsChampsSup[rivalChamp] = {"champId": database.getChampionIdByName(rivalChamp), "results": {}}
-            if ownChamp not in vsChampsSup[rivalChamp]:
+            if ownChamp not in vsChampsSup[rivalChamp]['results']:
                 if win:
                     vsChampsSup[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 1, "loses": 0}
+                    totalCounted += 1
                 else:
                     vsChampsSup[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 0, "loses": 1}
+                    totalCounted += 1
             else:
                 if win:
                     vsChampsSup[rivalChamp]['results'][ownChamp]["wins"] += 1
+                    totalCounted += 1
                 else:
                     vsChampsSup[rivalChamp]['results'][ownChamp]["loses"] += 1
+                    totalCounted += 1
 
-    vsChampsList = [vsChampsTop, vsChampsJgl, vsChampsMid, vsChampsAdc, vsChampsSup]
     # Se itera sobre cada vsChamps y se ordena por la suma total de partidas jugadas y cada campeón usado por la suma de sus wins + loses
+    # vsChampsList = [vsChampsTop, vsChampsJgl, vsChampsMid, vsChampsAdc, vsChampsSup]
     # for vsChamps in vsChampsList:
     #     vsChamps = dict(sorted(vsChamps.items(),
     #                            key=lambda x: sum(champion["wins"] + champion["loses"] for champion in x[1][1].values()),
@@ -1182,7 +1203,7 @@ def getWinrateAgainstChampions(puuid, matches):
         'Adc': vsChampsAdc,
         'Support': vsChampsSup
     }
-    totalCounted = 0
+
     for pos, vsChampions in vsChamps.items():
         print(f'Stats en la posición {pos}:')
         for enemy, played in vsChampions.items():
@@ -1194,7 +1215,6 @@ def getWinrateAgainstChampions(puuid, matches):
                 winrate = round(stats["wins"] / (stats["wins"] + stats["loses"]) * 100, 2)
                 print(
                     f'\t\t{champ}: {stats["wins"]} victorias y {stats["loses"]} derrotas, haciendo un total de {winrate} %')
-            totalCounted += totalWins + totalLoses
             print(
                 f"\tEsto hace un balance de {totalWins} victorias y {totalLoses} derrotas contra {enemy}({pos}), con un rendimiento de {round(totalWins / (totalWins + totalLoses) * 100, 2)} %\n")
             vsChamps[pos][enemy]['results']['totalWins'] = totalWins

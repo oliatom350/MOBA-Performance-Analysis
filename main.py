@@ -1,3 +1,4 @@
+import app.wsgi
 from app import api, proc_data, database
 
 if __name__ == '__main__':
@@ -17,4 +18,5 @@ if __name__ == '__main__':
         # database.getQueues()
         # print(api.registerSummonerByRiotId(summonerName, summonerTag))
         # print(api.registerSummonerByPUUID(puuidInicial))
+        # app.wsgi.updateUser(summonerName, summonerTag)
         proc_data.processPlayer(summonerName, summonerTag)
