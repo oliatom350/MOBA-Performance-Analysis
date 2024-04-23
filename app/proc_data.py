@@ -34,9 +34,9 @@ def processPlayer(name, riotId):
 
         # getResultsWithPartner(puuid, matches)
 
-        getWinrateAgainstChampions(puuid, matches)
+        # getWinrateAgainstChampions(puuid, matches)
 
-        # getWinrateAlongsideChampions(puuid, matches)
+        getWinrateAlongsideChampions(puuid, matches)
 
         # getQuickPlayerInfo(name, puuid, matches)
         # Se podría incluir la función getMeanDuration dentro de getQuickPlayerInfo
@@ -1262,9 +1262,17 @@ def getWinrateAlongsideChampions(puuid, matches):
             continue
         # Únicamente nos interesa obtener si el jugador ganó, en qué posición jugó, qué campeón utilizó y en qué equipo jugó
         win = ownInfo['win']
-        ownPos = getPlayerPosition(ownInfo)
         ownChamp = database.getChampionByKey(ownInfo['championId'])
         ownTeam = ownInfo['teamId']
+        if ownChamp not in withChamps:
+            withChamps[ownChamp] = {'champId': database.getChampionIdByName(ownChamp), 'partners': {}, 'totalWins': 0,
+                                    'totalLoses': 0}
+        if ownChamp in withChamps.keys():
+            if 'totalWins' in withChamps[ownChamp].keys() and 'totalLoses' in withChamps[ownChamp].keys():
+                if win:
+                    withChamps[ownChamp]['totalWins'] += 1
+                else:
+                    withChamps[ownChamp]['totalLoses'] += 1
 
         # Recorremos los participantes buscando a sus compañeros de equipo
         for participant in match['info']['participants']:
@@ -1277,29 +1285,26 @@ def getWinrateAlongsideChampions(puuid, matches):
                 continue
             # Almacenamos la información en función de lo jugador por el jugador y su compañero analizado
             # Insertamos los resultados en el diccionario correspondiente
-            if ownChamp not in withChamps:
-                withChamps[ownChamp] = {}
-            if partnerChamp not in withChamps[ownChamp]:
-                withChamps[ownChamp][partnerChamp] = {}
-            if partnerPosition not in withChamps[ownChamp][partnerChamp]:
+            if partnerChamp not in withChamps[ownChamp]['partners']:
+                withChamps[ownChamp]['partners'][partnerChamp] = {'champId': database.getChampionIdByName(partnerChamp), 'results': {}}
+            if partnerPosition not in withChamps[ownChamp]['partners'][partnerChamp]['results']:
                 if win:
-                    withChamps[ownChamp][partnerChamp][partnerPosition] = {"wins": 1, "loses": 0}
+                    withChamps[ownChamp]['partners'][partnerChamp]['results'][partnerPosition] = {"wins": 1, "loses": 0}
                 else:
-                    withChamps[ownChamp][partnerChamp][partnerPosition] = {"wins": 0, "loses": 1}
+                    withChamps[ownChamp]['partners'][partnerChamp]['results'][partnerPosition] = {"wins": 0, "loses": 1}
             else:
                 if win:
-                    withChamps[ownChamp][partnerChamp][partnerPosition]["wins"] += 1
+                    withChamps[ownChamp]['partners'][partnerChamp]['results'][partnerPosition]["wins"] += 1
                 else:
-                    withChamps[ownChamp][partnerChamp][partnerPosition]["loses"] += 1
+                    withChamps[ownChamp]['partners'][partnerChamp]['results'][partnerPosition]["loses"] += 1
 
     print(
         f'Se imprimen los campeones compañeros en todas las posiciones independientemente de dónde se jugara el campeón')
-    totalStats = {}
     for playerChampion, partners in withChamps.items():
         print(f'Stats para el campeón {playerChampion}:')
-        for partner, positions in withChamps[playerChampion].items():
+        for partner, partnerInfo in partners['partners'].items():
             totalWins = totalLoses = 0
-            for pos, stats in withChamps[playerChampion][partner].items():
+            for pos, stats in partnerInfo['results'].items():
                 totalWins += stats["wins"]
                 totalLoses += stats["loses"]
                 winrate = round(stats["wins"] / (stats["wins"] + stats["loses"]) * 100, 2)
@@ -1307,9 +1312,9 @@ def getWinrateAlongsideChampions(puuid, matches):
                     f'\t{partner}({pos}): {stats["wins"]} victorias y {stats["loses"]} derrotas, haciendo un total de {winrate} %')
             print(
                 f"\tEsto hace un balance de {totalWins} victorias y {totalLoses} derrotas con {partner} en todas sus posiciones, con un rendimiento de {round(totalWins / (totalWins + totalLoses) * 100, 2)} %\n")
-            withChamps[playerChampion][partner]['totalWins'] = totalWins
-            withChamps[playerChampion][partner]['totalLoses'] = totalLoses
-            withChamps[playerChampion][partner]['winrate'] = round(totalWins / (totalWins + totalLoses) * 100, 2)
+            withChamps[playerChampion]['partners'][partner]['results']['totalWins'] = totalWins
+            withChamps[playerChampion]['partners'][partner]['results']['totalLoses'] = totalLoses
+            withChamps[playerChampion]['partners'][partner]['results']['winrate'] = round(totalWins / (totalWins + totalLoses) * 100, 2)
         print("\n")
 
     print(f'TOTAL ANALIZADAS: {len(matches) - remakes}')
