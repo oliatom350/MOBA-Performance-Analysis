@@ -244,6 +244,26 @@ def getSummonerElo(puuid):
     return None
 
 
+def getChallengerPlayers():
+    query = {
+        "elo": {
+            "$elemMatch": {
+                "tier": "CHALLENGER",
+                "queueType": "RANKED_SOLO_5x5"
+            }
+        }
+    }
+
+    projection = {
+        "_id": 0,
+        "puuid": 1
+    }
+
+    result = dbSummoner.find(query, projection)
+    players = [player["puuid"] for player in result]
+    return players
+
+
 def getAllPlayers():
     data = dbSummoner.find()
     return data

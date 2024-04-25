@@ -36,20 +36,19 @@ def processPlayer(name, riotId):
 
         # getWinrateAgainstChampions(puuid, matches)
 
-        getWinrateAlongsideChampions(puuid, matches)
+        # getWinrateAlongsideChampions(puuid, matches)
 
-        # getQuickPlayerInfo(name, puuid, matches)
-        # Se podría incluir la función getMeanDuration dentro de getQuickPlayerInfo
-        # getMeanDuration(name, puuid, matches)
+        getQuickPlayerInfo(name, puuid, matches)
 
         # drawKillsHeatmaps(puuid, matches)
 
 
 def getReferenceData(position):
-    # TODO Posiblemente se pueda hacer un control de casos, donde primero se intente rescatar un proPlayer de la BBDD
-    #  con suficientes partidas almacenadas (crear nueva función) antes que buscarlo en la API
-    dicData = getProPlayersHistoryByPosition(position)
-    # return getDataFromProHistory(dicMatches)
+    challengers = database.getChallengerPlayers()
+    print(challengers)
+    dicData = getGivenProPlayersHistoryByPosition(challengers, position)
+    if dicData is None:
+        dicData = getUnknownProPlayersHistoryByPosition(position)
     return dicData
 
 
@@ -1437,30 +1436,24 @@ def dmgToObjectivesTurrets(puuid, matches, position, proData):
         resultDict = {}
         if pointsBuildings <= 2:
             resultDict['pointsBuildings'] = {'result': 'Negative', 'text': 'Low damage to buildings'}
-        elif 3 <= pointsBuildings < 5:
+        elif 3 <= pointsBuildings < 6:
             resultDict['pointsBuildings'] = {'result': "Normal", 'text': "Normal damage to buildings"}
-        elif 5 <= pointsBuildings < 7:
+        elif 6 <= pointsBuildings:
             resultDict['pointsBuildings'] = {'result': "Good", 'text': "Good damage to buildings"}
-        elif pointsBuildings >= 7:
-            resultDict['pointsBuildings'] = {'result': "Excellent", 'text': "High damage to buildings"}
 
         if pointsObjectives <= 2:
             resultDict['pointsObjectives'] = {'result': 'Negative', 'text': 'Low damage to objectives'}
-        elif 3 <= pointsObjectives < 5:
+        elif 3 <= pointsObjectives < 6:
             resultDict['pointsObjectives'] = {'result': "Normal", 'text': "Normal damage to objectives"}
-        elif 5 <= pointsObjectives < 7:
+        elif 6 <= pointsObjectives:
             resultDict['pointsObjectives'] = {'result': "Good", 'text': "Good damage to objectives"}
-        elif pointsObjectives >= 7:
-            resultDict['pointsObjectives'] = {'result': "Excellent", 'text': "High damage to objectives"}
 
         if pointsTurrets <= 2:
             resultDict['pointsTurrets'] = {'result': 'Negative', 'text': 'Low damage to turrets'}
-        elif 3 <= pointsTurrets < 5:
+        elif 3 <= pointsTurrets < 6:
             resultDict['pointsTurrets'] = {'result': "Normal", 'text': "Normal damage to turrets"}
-        elif 5 <= pointsTurrets < 7:
+        elif 6 <= pointsTurrets:
             resultDict['pointsTurrets'] = {'result': "Good", 'text': "Good damage to turrets"}
-        elif pointsTurrets >= 7:
-            resultDict['pointsTurrets'] = {'result': "Excellent", 'text': "High damage to turrets"}
 
         return resultDict
 
@@ -1791,7 +1784,35 @@ def getProPlayersHistory():
     return dicMatches
 
 
-def getProPlayersHistoryByPosition(position):
+def getGivenProPlayersHistoryByPosition(pros, position):
+    dicData = None
+    for pro in pros:
+        proName = api.getSummonerName(pro)
+        print(f'Procesando al jugador {proName}')
+        if database.checkPlayerDB(pro):
+            proMatches = database.getAllPlayersGames(pro)
+            if 0 <= len(proMatches) < 20:
+                continue
+            dicPos = getMatchesPosition(proName, pro, proMatches)
+            proPos = sum(dicPos[position].values())
+            if proPos >= 15:
+                dicData = {'puuid': pro,
+                           'name': proName,
+                           'matches': {}}
+                for matchID, matchInfo in proMatches.items():
+                    pos = getPlayerPosition(getMatchPlayerInfo(pro, matchInfo))
+                    if pos == position:
+                        dicData['matches'][matchID] = matchInfo
+                    if database.checkGameDB(matchID):
+                        continue
+                print(f'Se han obtenido las partidas de {proName}')
+                break
+        else:
+            continue
+    return dicData
+
+
+def getUnknownProPlayersHistoryByPosition(position):
     # Recuperamos la lista de los mejores proPlayers
     proPlayers = api.getProPlayers()
     for pro in proPlayers:
