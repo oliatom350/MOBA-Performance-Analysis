@@ -159,9 +159,11 @@ def getQuickPlayerData(username, riotId):
 @app.route('/<username>/<riotId>/heatmaps')
 def getHeatmapsImgs(username, riotId):
     puuid = api.getSummonerPUUID(username, riotId)
-    matches = database.getAllPlayersGames(puuid)
+    matches = database.getNPlayersGames(puuid, 5)
+    print(len(matches))
     images = proc_data.drawKillsHeatmaps(puuid, matches)
-    return jsonify(images)
+    encoded_images = {key: base64.b64encode(value.getvalue()).decode('utf-8') for key, value in images.items()}
+    return jsonify(encoded_images)
 
 
 if __name__ == '__main__':

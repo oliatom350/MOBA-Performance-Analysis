@@ -152,6 +152,18 @@ def getAllPlayersGames(puuid):
     return matchDict
 
 
+def getNPlayersGames(puuid, n):
+    matchList = list(dbMatches.find({'metadata.participants': puuid}))
+    matchDict = {}
+    for match in matchList:
+        if n <= 0:
+            break
+        matchID = match['metadata']['matchId']
+        matchDict[matchID] = match
+        n -= 1
+    return matchDict
+
+
 def checkMatchTimeline(matchID):
     existing_match = dbTimeline.find_one({"matchId": matchID})
     if existing_match is None:

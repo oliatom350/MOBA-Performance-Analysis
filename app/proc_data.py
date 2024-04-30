@@ -1,16 +1,20 @@
-import base64
 import re
 import time
 from enum import Enum
 from io import BytesIO
 
-import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from matplotlib import image as mpimg
 
 import api
 import database
+
+import matplotlib
+import matplotlib.pyplot as plt
+# Para el correcto funcionamiento de matplotlib en un servicio web, se utiliza el backend "Agg", que es un backend no
+# interactivo diseñado para generar imágenes sin necesidad de una interfaz gráfica de usuario
+matplotlib.use('Agg')
 
 
 class DamageType(Enum):
@@ -38,9 +42,9 @@ def processPlayer(name, riotId):
 
         # getWinrateAlongsideChampions(puuid, matches)
 
-        getQuickPlayerInfo(name, puuid, matches)
+        # getQuickPlayerInfo(name, puuid, matches)
 
-        # drawKillsHeatmaps(puuid, matches)
+        drawKillsHeatmaps(puuid, matches)
 
 
 def getReferenceData(position):
@@ -192,10 +196,12 @@ def getMatchesPosition(name, puuid, matches):
 
     dicPos = {
         'TOP': {'Normal': topNorm, 'SoloDuo': topSolo, 'Flex': topFlex, 'Total': (topNorm + topSolo + topFlex)},
-        'JUNGLE': {'Normal': jungleNorm, 'SoloDuo': jungleSolo, 'Flex': jungleFlex, 'Total': (jungleNorm + jungleSolo + jungleFlex)},
+        'JUNGLE': {'Normal': jungleNorm, 'SoloDuo': jungleSolo, 'Flex': jungleFlex,
+                   'Total': (jungleNorm + jungleSolo + jungleFlex)},
         'MIDDLE': {'Normal': midNorm, 'SoloDuo': midSolo, 'Flex': midFlex, 'Total': (midNorm + midSolo + midFlex)},
         'BOTTOM': {'Normal': adcNorm, 'SoloDuo': adcSolo, 'Flex': adcFlex, 'Total': (adcNorm + adcSolo + adcFlex)},
-        'UTILITY': {'Normal': suppNorm, 'SoloDuo': suppSolo, 'Flex': suppFlex, 'Total': (suppNorm + suppSolo + suppFlex)}
+        'UTILITY': {'Normal': suppNorm, 'SoloDuo': suppSolo, 'Flex': suppFlex,
+                    'Total': (suppNorm + suppSolo + suppFlex)}
     }
 
     return dicPos
@@ -1046,7 +1052,10 @@ def getResultsWithPartner(puuid, matches):
     for companionPUUID, companion in dicPartners.items():
         print(
             f'{companion[0]}: {companion[1]} victorias y {companion[2]} derrotas, haciendo un winrate de {round((companion[1] / (companion[1] + companion[2])) * 100, 2)}%')
-        finalPartners[companion[0]] = {'games': companion[1] + companion[2], 'wins': companion[1], 'loses': companion[2], 'winrate': round((companion[1] / (companion[1] + companion[2])) * 100, 2), 'icon': database.getSummonerIconAndLevel(companionPUUID)['profileIconId']}
+        finalPartners[companion[0]] = {'games': companion[1] + companion[2], 'wins': companion[1],
+                                       'loses': companion[2],
+                                       'winrate': round((companion[1] / (companion[1] + companion[2])) * 100, 2),
+                                       'icon': database.getSummonerIconAndLevel(companionPUUID)['profileIconId']}
     return finalPartners
 
 
@@ -1100,10 +1109,12 @@ def getWinrateAgainstChampions(puuid, matches):
                 vsChampsTop[rivalChamp] = {"champId": database.getChampionIdByName(rivalChamp), "results": {}}
             if ownChamp not in vsChampsTop[rivalChamp]['results']:
                 if win:
-                    vsChampsTop[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 1, "loses": 0}
+                    vsChampsTop[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp),
+                                                                    "wins": 1, "loses": 0}
                     totalCounted += 1
                 else:
-                    vsChampsTop[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 0, "loses": 1}
+                    vsChampsTop[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp),
+                                                                    "wins": 0, "loses": 1}
                     totalCounted += 1
             else:
                 if win:
@@ -1118,10 +1129,12 @@ def getWinrateAgainstChampions(puuid, matches):
                 vsChampsJgl[rivalChamp] = {"champId": database.getChampionIdByName(rivalChamp), "results": {}}
             if ownChamp not in vsChampsJgl[rivalChamp]['results']:
                 if win:
-                    vsChampsJgl[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 1, "loses": 0}
+                    vsChampsJgl[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp),
+                                                                    "wins": 1, "loses": 0}
                     totalCounted += 1
                 else:
-                    vsChampsJgl[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 0, "loses": 1}
+                    vsChampsJgl[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp),
+                                                                    "wins": 0, "loses": 1}
                     totalCounted += 1
             else:
                 if win:
@@ -1136,10 +1149,12 @@ def getWinrateAgainstChampions(puuid, matches):
                 vsChampsMid[rivalChamp] = {"champId": database.getChampionIdByName(rivalChamp), "results": {}}
             if ownChamp not in vsChampsMid[rivalChamp]['results']:
                 if win:
-                    vsChampsMid[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 1, "loses": 0}
+                    vsChampsMid[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp),
+                                                                    "wins": 1, "loses": 0}
                     totalCounted += 1
                 else:
-                    vsChampsMid[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 0, "loses": 1}
+                    vsChampsMid[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp),
+                                                                    "wins": 0, "loses": 1}
                     totalCounted += 1
             else:
                 if win:
@@ -1154,10 +1169,12 @@ def getWinrateAgainstChampions(puuid, matches):
                 vsChampsAdc[rivalChamp] = {"champId": database.getChampionIdByName(rivalChamp), "results": {}}
             if ownChamp not in vsChampsAdc[rivalChamp]['results']:
                 if win:
-                    vsChampsAdc[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 1, "loses": 0}
+                    vsChampsAdc[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp),
+                                                                    "wins": 1, "loses": 0}
                     totalCounted += 1
                 else:
-                    vsChampsAdc[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 0, "loses": 1}
+                    vsChampsAdc[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp),
+                                                                    "wins": 0, "loses": 1}
                     totalCounted += 1
             else:
                 if win:
@@ -1172,10 +1189,12 @@ def getWinrateAgainstChampions(puuid, matches):
                 vsChampsSup[rivalChamp] = {"champId": database.getChampionIdByName(rivalChamp), "results": {}}
             if ownChamp not in vsChampsSup[rivalChamp]['results']:
                 if win:
-                    vsChampsSup[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 1, "loses": 0}
+                    vsChampsSup[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp),
+                                                                    "wins": 1, "loses": 0}
                     totalCounted += 1
                 else:
-                    vsChampsSup[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp), "wins": 0, "loses": 1}
+                    vsChampsSup[rivalChamp]['results'][ownChamp] = {"champId": database.getChampionIdByName(ownChamp),
+                                                                    "wins": 0, "loses": 1}
                     totalCounted += 1
             else:
                 if win:
@@ -1285,7 +1304,8 @@ def getWinrateAlongsideChampions(puuid, matches):
             # Almacenamos la información en función de lo jugador por el jugador y su compañero analizado
             # Insertamos los resultados en el diccionario correspondiente
             if partnerChamp not in withChamps[ownChamp]['partners']:
-                withChamps[ownChamp]['partners'][partnerChamp] = {'champId': database.getChampionIdByName(partnerChamp), 'results': {}}
+                withChamps[ownChamp]['partners'][partnerChamp] = {'champId': database.getChampionIdByName(partnerChamp),
+                                                                  'results': {}}
             if partnerPosition not in withChamps[ownChamp]['partners'][partnerChamp]['results']:
                 if win:
                     withChamps[ownChamp]['partners'][partnerChamp]['results'][partnerPosition] = {"wins": 1, "loses": 0}
@@ -1313,7 +1333,8 @@ def getWinrateAlongsideChampions(puuid, matches):
                 f"\tEsto hace un balance de {totalWins} victorias y {totalLoses} derrotas con {partner} en todas sus posiciones, con un rendimiento de {round(totalWins / (totalWins + totalLoses) * 100, 2)} %\n")
             withChamps[playerChampion]['partners'][partner]['results']['totalWins'] = totalWins
             withChamps[playerChampion]['partners'][partner]['results']['totalLoses'] = totalLoses
-            withChamps[playerChampion]['partners'][partner]['results']['winrate'] = round(totalWins / (totalWins + totalLoses) * 100, 2)
+            withChamps[playerChampion]['partners'][partner]['results']['winrate'] = round(
+                totalWins / (totalWins + totalLoses) * 100, 2)
         print("\n")
 
     print(f'TOTAL ANALIZADAS: {len(matches) - remakes}')
@@ -1338,39 +1359,40 @@ def getQuickPlayerInfo(name, puuid, matches):
     resultingData = {}
     #  1- Función de daño a objetivos y/o torretas promedio de las 10 últimas partidas jugadas
     proDmgToObjectivesTurretsData = dmgToObjectivesTurrets(data['puuid'], data['matches'], mostPlayedPosition, {})
-    playerDmgToObjectivesTurrets = dmgToObjectivesTurrets(puuid, matches, mostPlayedPosition, proDmgToObjectivesTurretsData)
-    resultingData['dmgToObjectivesTurrets'] = playerDmgToObjectivesTurrets
+    playerDmgToObjectivesTurrets = dmgToObjectivesTurrets(puuid, matches, mostPlayedPosition,
+                                                          proDmgToObjectivesTurretsData)
+    resultingData['Strategic Participation'] = playerDmgToObjectivesTurrets
     print(playerDmgToObjectivesTurrets)
     #  2- Función que calcule los pingeos promedios y los compare con el del jugador
     proMeanPlayerPings = meanPlayerPings(data['puuid'], data['matches'], {})
     playerPings = meanPlayerPings(puuid, matches, proMeanPlayerPings)
-    resultingData['playerPings'] = playerPings
+    resultingData['Player Pings'] = playerPings
     print(playerPings)
     #  3- Función que compruebe si se lleva la primera kill con frecuencia
     firstKiller = usualFirstKillerOrAssistant(puuid, matches)
-    resultingData['firstKiller'] = firstKiller
+    resultingData['FirstKiller'] = firstKiller
     print(firstKiller)
     # TODO
     #  4- Función que compara los daños recibidos e infligidos con los de su rival de posición
     dicDamage = damageTakenAndCaused(puuid, matches, mostPlayedPosition)
-    resultingData['damageTakenAndCaused'] = dicDamage
+    resultingData['Damage Ingame'] = dicDamage
     print(dicDamage)
     #  5- Función que compruebe si ha hecho alguna multikill recientemente
     dicKills = isPlayerMultikiller(puuid, matches)
-    resultingData['multikiller'] = dicKills
+    resultingData['MultiKiller'] = dicKills
     print(dicKills)
     #  6- Función que compruebe si ha robado objetivos recientemente
     objectiveThief = isObjectiveThief(puuid, matches)
-    resultingData['objectiveThief'] = objectiveThief
+    resultingData['Objective Thief'] = objectiveThief
     print(objectiveThief)
     #  7- Función que obtenga la visión por minuto y valore el resultado
     proVision = getVisionPerMin(data['puuid'], data['matches'], mostPlayedPosition, {})
     playerVision = getVisionPerMin(puuid, matches, mostPlayedPosition, proVision)
-    resultingData['playerVision'] = playerVision
+    resultingData['Player Vision'] = playerVision
     print(playerVision)
     #  8- Función que devuelve la duración media por partida
     playerGameDuration = getMeanDuration(name, puuid, matches)
-    resultingData['meanDuration'] = playerGameDuration
+    resultingData['Mean Game Duration'] = playerGameDuration
     return resultingData
 
 
@@ -1435,25 +1457,25 @@ def dmgToObjectivesTurrets(puuid, matches, position, proData):
 
         resultDict = {}
         if pointsBuildings <= 2:
-            resultDict['pointsBuildings'] = {'result': 'Negative', 'text': 'Low damage to buildings'}
+            resultDict['Buildings Damage'] = {'result': 'Negative', 'text': 'Low damage to buildings'}
         elif 3 <= pointsBuildings < 6:
-            resultDict['pointsBuildings'] = {'result': "Normal", 'text': "Normal damage to buildings"}
+            resultDict['Buildings Damage'] = {'result': "Normal", 'text': "Normal damage to buildings"}
         elif 6 <= pointsBuildings:
-            resultDict['pointsBuildings'] = {'result': "Good", 'text': "Good damage to buildings"}
+            resultDict['Buildings Damage'] = {'result': "Good", 'text': "Good damage to buildings"}
 
         if pointsObjectives <= 2:
-            resultDict['pointsObjectives'] = {'result': 'Negative', 'text': 'Low damage to objectives'}
+            resultDict['Objectives Damage'] = {'result': 'Negative', 'text': 'Low damage to objectives'}
         elif 3 <= pointsObjectives < 6:
-            resultDict['pointsObjectives'] = {'result': "Normal", 'text': "Normal damage to objectives"}
+            resultDict['Objectives Damage'] = {'result': "Normal", 'text': "Normal damage to objectives"}
         elif 6 <= pointsObjectives:
-            resultDict['pointsObjectives'] = {'result': "Good", 'text': "Good damage to objectives"}
+            resultDict['Objectives Damage'] = {'result': "Good", 'text': "Good damage to objectives"}
 
         if pointsTurrets <= 2:
-            resultDict['pointsTurrets'] = {'result': 'Negative', 'text': 'Low damage to turrets'}
+            resultDict['Turrets Damage'] = {'result': 'Negative', 'text': 'Low damage to turrets'}
         elif 3 <= pointsTurrets < 6:
-            resultDict['pointsTurrets'] = {'result': "Normal", 'text': "Normal damage to turrets"}
+            resultDict['Turrets Damage'] = {'result': "Normal", 'text': "Normal damage to turrets"}
         elif 6 <= pointsTurrets:
-            resultDict['pointsTurrets'] = {'result': "Good", 'text': "Good damage to turrets"}
+            resultDict['Turrets Damage'] = {'result': "Good", 'text': "Good damage to turrets"}
 
         return resultDict
 
@@ -1553,37 +1575,38 @@ def damageTakenAndCaused(puuid, matches, position):
 
     resultDic = {}
     if dicDamage['totalDamageDealt'] <= -8:
-        resultDic['totalDamageDealt'] = {'result': 'Negative', 'text': 'Very low total damage dealt'}
+        resultDic['Total Damage Dealt'] = {'result': 'Negative', 'text': 'Very low total damage dealt'}
     elif -8 <= dicDamage['totalDamageDealt'] < -3:
-        resultDic['totalDamageDealt'] = {'result': "Negative", 'text': "Low total damage dealt"}
+        resultDic['Total Damage Dealt'] = {'result': "Negative", 'text': "Low total damage dealt"}
     elif -3 <= dicDamage['totalDamageDealt'] < 4:
-        resultDic['totalDamageDealt'] = {'result': "Normal", 'text': "Normal total damage dealt"}
+        resultDic['Total Damage Dealt'] = {'result': "Normal", 'text': "Normal total damage dealt"}
     elif 4 <= dicDamage['totalDamageDealt'] < 8:
-        resultDic['totalDamageDealt'] = {'result': "Good", 'text': "High total damage dealt"}
+        resultDic['Total Damage Dealt'] = {'result': "Good", 'text': "High total damage dealt"}
     elif dicDamage['totalDamageDealt'] >= 8:
-        resultDic['totalDamageDealt'] = {'result': "Good", 'text': "Very high total damage dealt"}
+        resultDic['Total Damage Dealt'] = {'result': "Good", 'text': "Very high total damage dealt"}
 
     if dicDamage['totalDamageDealtToChampions'] <= -8:
-        resultDic['totalDamageDealtToChampions'] = {'result': 'Negative', 'text': 'Very low total damage dealt to champions'}
+        resultDic['Damage Dealt To Champions'] = {'result': 'Negative',
+                                                  'text': 'Very low total damage dealt to champions'}
     elif -8 <= dicDamage['totalDamageDealtToChampions'] < -3:
-        resultDic['totalDamageDealtToChampions'] = {'result': "Negative", 'text': "Low total damage dealt to champions"}
+        resultDic['Damage Dealt To Champions'] = {'result': "Negative", 'text': "Low total damage dealt to champions"}
     elif -3 <= dicDamage['totalDamageDealtToChampions'] < 4:
-        resultDic['totalDamageDealtToChampions'] = {'result': "Normal", 'text': "Normal total damage dealt to champions"}
+        resultDic['Damage Dealt To Champions'] = {'result': "Normal", 'text': "Normal total damage dealt to champions"}
     elif 4 <= dicDamage['totalDamageDealtToChampions'] < 8:
-        resultDic['totalDamageDealtToChampions'] = {'result': "Good", 'text': "High total damage dealt to champions"}
+        resultDic['Damage Dealt To Champions'] = {'result': "Good", 'text': "High total damage dealt to champions"}
     elif dicDamage['totalDamageDealtToChampions'] >= 8:
-        resultDic['totalDamageDealtToChampions'] = {'result': "Good", 'text': "Very high total damage dealt to champions"}
+        resultDic['Damage Dealt To Champions'] = {'result': "Good", 'text': "Very high total damage dealt to champions"}
 
     if dicDamage['totalDamageTaken'] <= -8:
-        resultDic['totalDamageTaken'] = {'result': 'Negative', 'text': 'Very low total damage taken'}
+        resultDic['Damage Taken'] = {'result': 'Negative', 'text': 'Very low total damage taken'}
     elif -8 <= dicDamage['totalDamageTaken'] < -3:
-        resultDic['totalDamageTaken'] = {'result': "Negative", 'text': "Low total damage taken"}
+        resultDic['Damage Taken'] = {'result': "Negative", 'text': "Low total damage taken"}
     elif -3 <= dicDamage['totalDamageTaken'] < 4:
-        resultDic['totalDamageTaken'] = {'result': "Normal", 'text': "Normal total damage taken"}
+        resultDic['Damage Taken'] = {'result': "Normal", 'text': "Normal total damage taken"}
     elif 4 <= dicDamage['totalDamageTaken'] < 8:
-        resultDic['totalDamageTaken'] = {'result': "Good", 'text': "High total damage taken"}
+        resultDic['Damage Taken'] = {'result': "Good", 'text': "High total damage taken"}
     elif dicDamage['totalDamageTaken'] >= 8:
-        resultDic['totalDamageTaken'] = {'result': "Good", 'text': "Very high total damage taken"}
+        resultDic['Damage Taken'] = {'result': "Good", 'text': "Very high total damage taken"}
 
     return resultDic
 
@@ -1621,13 +1644,13 @@ def isPlayerMultikiller(puuid, matches):
 
     resultDic = {}
     if dicKills['pentaKills']['count'] > 0:
-        resultDic['pentaKills'] = {'result': "Good", 'text': "Pentakiller"}
+        resultDic['PentaKills'] = {'result': "Good", 'text': "Pentakiller"}
     if dicKills['quadraKills']['count'] > 0:
-        resultDic['quadraKills'] = {'result': "Good", 'text': "Quadrakiller"}
+        resultDic['QuadraKills'] = {'result': "Good", 'text': "Quadrakiller"}
     if dicKills['tripleKills']['count'] >= 2:
-        resultDic['tripleKills'] = {'result': "Good", 'text': "Triplekiller"}
+        resultDic['TripleKills'] = {'result': "Good", 'text': "Triplekiller"}
     if dicKills['doubleKills']['count'] >= 5:
-        resultDic['doubleKills'] = {'result': "Good", 'text': "Doublekiller"}
+        resultDic['DoubleKills'] = {'result': "Good", 'text': "Doublekiller"}
     return resultDic
 
 
@@ -1666,43 +1689,43 @@ def getVisionPerMin(puuid, matches, position, proData):
         dicPlayerVision = {}
         if diffVisionPerMin >= 0.5:
             # Buena visión
-            dicPlayerVision['goodVision'] = {'result': "Good", 'text': "Good vision per minute"}
+            dicPlayerVision['Vision Per Minute'] = {'result': "Good", 'text': "Good vision per minute"}
         elif diffVisionPerMin <= -0.5:
             # Mala visión
-            dicPlayerVision['goodVision'] = {'result': "Negative", 'text': "Bad vision per minute"}
+            dicPlayerVision['Vision Per Minute'] = {'result': "Negative", 'text': "Bad vision per minute"}
         else:
             # No es buena ni mala
-            dicPlayerVision['goodVision'] = {'result': "Normal", 'text': "Average vision per minute"}
+            dicPlayerVision['Vision Per Minute'] = {'result': "Normal", 'text': "Average vision per minute"}
 
         if diffDetectorWards >= 20:
             # Buena visión
-            dicPlayerVision['diffDetectorWards'] = {'result': "Good", 'text': "Buys pink wards"}
+            dicPlayerVision['Pink Wards'] = {'result': "Good", 'text': "Buys pink wards"}
         elif diffDetectorWards <= -20:
             # Mala visión
-            dicPlayerVision['diffDetectorWards'] = {'result': "Negative", 'text': "Not enough pink wards"}
+            dicPlayerVision['Pink Wards'] = {'result': "Negative", 'text': "Not enough pink wards"}
         else:
             # No es buena ni mala
-            dicPlayerVision['diffDetectorWards'] = {'result': "Normal", 'text': "Average pink wards"}
+            dicPlayerVision['Pink Wards'] = {'result': "Normal", 'text': "Average pink wards"}
 
         if diffVisionWards >= 25:
             # Buena visión
-            dicPlayerVision['diffVisionWards'] = {'result': "Good", 'text': "Good ward placement"}
+            dicPlayerVision['Normal Wards'] = {'result': "Good", 'text': "Good ward placement"}
         elif diffVisionWards <= -25:
             # Mala visión
-            dicPlayerVision['diffVisionWards'] = {'result': "Negative", 'text': "Bad ward placement"}
+            dicPlayerVision['Normal Wards'] = {'result': "Negative", 'text': "Bad ward placement"}
         else:
             # No es buena ni mala
-            dicPlayerVision['diffVisionWards'] = {'result': "Normal", 'text': "Average ward placement"}
+            dicPlayerVision['Normal Wards'] = {'result': "Normal", 'text': "Average ward placement"}
 
         if diffWardsKilled >= 15:
             # Buena visión
-            dicPlayerVision['diffWardsKilled'] = {'result': "Good", 'text': "Good wards cleaned"}
+            dicPlayerVision['Wards Cleaning'] = {'result': "Good", 'text': "Many wards cleaned"}
         elif diffWardsKilled <= -15:
             # Mala visión
-            dicPlayerVision['diffWardsKilled'] = {'result': "Negative", 'text': "Bad wards cleaned"}
+            dicPlayerVision['Wards Cleaning'] = {'result': "Negative", 'text': "Few wards cleaned"}
         else:
             # No es buena ni mala
-            dicPlayerVision['diffWardsKilled'] = {'result': "Normal", 'text': "Average wards cleaned"}
+            dicPlayerVision['Wards Cleaning'] = {'result': "Normal", 'text': "Average wards cleaned"}
         return dicPlayerVision
 
 
@@ -1868,6 +1891,7 @@ def plotImage(listName, pointList, color):
 def plotHeatMap(listName, pointList):
     scaleFactor = 10
     imagePath = '../lib/map/map.png'
+    # imagePath = './lib/map/map.png'
     scaledPoints = [((x - 240) / scaleFactor, (14980 - y + 240) / scaleFactor) for x, y in pointList]
     img = mpimg.imread(imagePath)
     plt.imshow(img)
@@ -1880,14 +1904,16 @@ def plotHeatMap(listName, pointList):
     sns.kdeplot(df, x='x', y='y', fill=True, cmap='Spectral', antialiased=True, bw_method=0.35, levels=100, alpha=0.35)
     # sns.kdeplot(df, x='x', y='y', fill=True, cmap='Spectral', color='r', thresh=0, bw_method=0.3, levels=80, alpha=0.25)
     plt.axis('off')
-    plt.title(listName)
+    # plt.title(listName)
     # plt.show()
     buffer = BytesIO()
     plt.savefig(buffer, format='png')
     # plt.close(img)
 
-    encoded_img = base64.b64encode(buffer.getvalue()).decode('utf-8')
-    return encoded_img
+    buffer.seek(0)
+    return buffer
+    # encoded_img = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    # return encoded_img
 
 
 def drawKillsHeatmaps(puuid, matches):
@@ -1944,6 +1970,12 @@ def drawKillsHeatmaps(puuid, matches):
     # plotHeatMap('AllKillPositions', blueKillPositions + redKillPositions)
     # plotHeatMap('AllAssistPositions', blueAssistPositions + redAssistPositions)
     # plotHeatMap('AllDeathPositions', blueDeathPositions + redDeathPositions)
+    print(len(blueKillPositions))
+    print(len(redKillPositions))
+    print(len(blueAssistPositions))
+    print(len(redAssistPositions))
+    print(len(blueDeathPositions))
+    print(len(redDeathPositions))
     images = {'blueKillPositions': plotHeatMap('blueKillPositions', blueKillPositions),
               'redKillPositions': plotHeatMap('redKillPositions', redKillPositions),
               'blueAssistPositions': plotHeatMap('blueAssistPositions', blueAssistPositions),
@@ -1954,4 +1986,3 @@ def drawKillsHeatmaps(puuid, matches):
               'AllAssistPositions': plotHeatMap('AllAssistPositions', blueAssistPositions + redAssistPositions),
               'AllDeathPositions': plotHeatMap('AllDeathPositions', blueDeathPositions + redDeathPositions)}
     return images
-
