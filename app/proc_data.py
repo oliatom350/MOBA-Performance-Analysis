@@ -1889,6 +1889,8 @@ def plotImage(listName, pointList, color):
 
 
 def plotHeatMap(listName, pointList):
+    # TODO El problema es que se plotean los puntos de todos los mapas de calor anteriores, por lo que habría que hacer un plt.clear o algo similar
+    plt.clf()
     scaleFactor = 10
     imagePath = '../lib/map/map.png'
     # imagePath = './lib/map/map.png'
@@ -1901,11 +1903,15 @@ def plotHeatMap(listName, pointList):
     plt.ylim(1499, 0)
     for scaledX, scaledY in scaledPoints:
         plt.scatter(scaledX, scaledY, color='white', s=20, alpha=0.2)
+    print(f'df: {df} // len_df: {len(df)} // // len_scaledPoints: {len(scaledPoints)} // listname: {listName}')
+    # sns.kdeplot(df, x='x', y='y', fill=True, cmap='Spectral', antialiased=True, bw_method=0.35, alpha=0.35)
     sns.kdeplot(df, x='x', y='y', fill=True, cmap='Spectral', antialiased=True, bw_method=0.35, levels=100, alpha=0.35)
+
+
     # sns.kdeplot(df, x='x', y='y', fill=True, cmap='Spectral', color='r', thresh=0, bw_method=0.3, levels=80, alpha=0.25)
     plt.axis('off')
     # plt.title(listName)
-    # plt.show()
+    plt.show()
     buffer = BytesIO()
     plt.savefig(buffer, format='png')
     # plt.close(img)
@@ -1971,6 +1977,7 @@ def drawKillsHeatmaps(puuid, matches):
     # plotHeatMap('AllAssistPositions', blueAssistPositions + redAssistPositions)
     # plotHeatMap('AllDeathPositions', blueDeathPositions + redDeathPositions)
     print(len(blueKillPositions))
+    print(blueKillPositions)
     print(len(redKillPositions))
     print(len(blueAssistPositions))
     print(len(redAssistPositions))
