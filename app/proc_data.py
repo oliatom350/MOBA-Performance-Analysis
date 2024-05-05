@@ -36,13 +36,13 @@ def processPlayer(name, riotId):
         # definingChampPool(name, puuid, matches)
         # definingChampPool2(name, puuid, matches)
 
-        getResultsWithPartner(puuid, matches)
+        # getResultsWithPartner(puuid, matches)
 
         # getWinrateAgainstChampions(puuid, matches)
 
         # getWinrateAlongsideChampions(puuid, matches)
 
-        # getQuickPlayerInfo(name, puuid, matches)
+        getQuickPlayerInfo(name, puuid, matches)
 
         # drawKillsHeatmaps(puuid, matches)
 
@@ -1024,6 +1024,7 @@ def getPointsGivenRange(x, rangeArray, pointsArray):
     for i in range(len(rangeArray) - 1, -1, -1):
         if rangeArray[i] <= x:
             return pointsArray[i]
+    return pointsArray[0]
 
 
 def getResultsWithPartner(puuid, matches):
@@ -1380,7 +1381,6 @@ def getQuickPlayerInfo(name, puuid, matches):
     firstKiller = usualFirstKillerOrAssistant(puuid, matches)
     resultingData['FirstKiller'] = firstKiller
     print(firstKiller)
-    # TODO
     #  4- Función que compara los daños recibidos e infligidos con los de su rival de posición
     dicDamage = damageTakenAndCaused(puuid, matches, mostPlayedPosition)
     resultingData['Damage Ingame'] = dicDamage

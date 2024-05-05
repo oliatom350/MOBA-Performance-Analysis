@@ -6,9 +6,9 @@ from flask import Flask, jsonify, make_response
 from flask_cors import CORS
 from markupsafe import escape
 
-import api
-import database
-import proc_data
+from app import api
+from app import database
+from app import proc_data
 
 app = Flask(__name__)
 CORS(app)
