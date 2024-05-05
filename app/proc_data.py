@@ -7,8 +7,8 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import image as mpimg
 
-import api
-import database
+from app import api
+from app import database
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -36,7 +36,7 @@ def processPlayer(name, riotId):
         # definingChampPool(name, puuid, matches)
         # definingChampPool2(name, puuid, matches)
 
-        # getResultsWithPartner(puuid, matches)
+        getResultsWithPartner(puuid, matches)
 
         # getWinrateAgainstChampions(puuid, matches)
 
@@ -44,7 +44,7 @@ def processPlayer(name, riotId):
 
         # getQuickPlayerInfo(name, puuid, matches)
 
-        drawKillsHeatmaps(puuid, matches)
+        # drawKillsHeatmaps(puuid, matches)
 
 
 def getReferenceData(position):
@@ -649,12 +649,16 @@ def definingChampPool2(name, puuid, matches):
 
     # Se itera sobre los campeones híbridos y se sustituye en cualquier conjunto el campeón con menor puntaje, parando
     # la iteración si los 4 campeones seleccionados poseen mejor puntuación que el siguiente híbrido
+    changed = False
     for champ, info in HybridChamps.items():
         for selectedChamp, selectedInfo in selectedChampsReversed.items():
             if info[1] > selectedInfo[1]:
                 selectedChamps.pop(selectedChamp)
                 selectedChamps[champ] = info
+                changed = True
                 break
+        if changed:
+            break
 
     # Falta introducir el quinto y último campeón
     comfortChamp = ''
@@ -1050,12 +1054,16 @@ def getResultsWithPartner(puuid, matches):
         dicPartners.pop(stranger)
     finalPartners = {}
     for companionPUUID, companion in dicPartners.items():
+        iconAndLevel = database.getSummonerIconAndLevel(companionPUUID)
+        if iconAndLevel is None:
+            api.registerSummonerByPUUID(companionPUUID)
+            iconAndLevel = database.getSummonerIconAndLevel(companionPUUID)
         print(
             f'{companion[0]}: {companion[1]} victorias y {companion[2]} derrotas, haciendo un winrate de {round((companion[1] / (companion[1] + companion[2])) * 100, 2)}%')
         finalPartners[companion[0]] = {'games': companion[1] + companion[2], 'wins': companion[1],
                                        'loses': companion[2],
                                        'winrate': round((companion[1] / (companion[1] + companion[2])) * 100, 2),
-                                       'icon': database.getSummonerIconAndLevel(companionPUUID)['profileIconId']}
+                                       'icon': iconAndLevel['profileIconId']}
     return finalPartners
 
 
