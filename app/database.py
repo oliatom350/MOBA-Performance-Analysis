@@ -154,8 +154,9 @@ def getAllPlayersGames(puuid):
 
 def getNPlayersGames(puuid, n):
     matchList = list(dbMatches.find({'metadata.participants': puuid}))
+    sorted_matchList = sorted(matchList, key=lambda x: x['info']['gameId'], reverse=True)
     matchDict = {}
-    for match in matchList:
+    for match in sorted_matchList:
         if n <= 0:
             break
         matchID = match['metadata']['matchId']

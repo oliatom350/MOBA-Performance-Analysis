@@ -7,8 +7,8 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import image as mpimg
 
-from app import api
-from app import database
+import api
+import database
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -25,7 +25,8 @@ class DamageType(Enum):
 
 def processPlayer(name, riotId):
     puuid = api.getSummonerPUUID(name, riotId)
-    matches = getAllPlayerMatches(name, puuid)
+    # matches = getAllPlayerMatches(name, puuid)
+    matches = database.getNPlayersGames(puuid, 7)
     if matches:
         # getMatchesPosition(name, puuid, matches)
 
@@ -42,9 +43,9 @@ def processPlayer(name, riotId):
 
         # getWinrateAlongsideChampions(puuid, matches)
 
-        getQuickPlayerInfo(name, puuid, matches)
+        # getQuickPlayerInfo(name, puuid, matches)
 
-        # drawKillsHeatmaps(puuid, matches)
+        drawKillsHeatmaps(puuid, matches)
 
 
 def getReferenceData(position):
@@ -104,7 +105,8 @@ def getAllPlayerMatches(name, puuid):
     # Una vez llegados a este punto, deberían haberse recuperado un número mínimo de 100 partidas totales.
     # En el caso de que no sean suficientes, se mostrará un mensaje de que no hay suficientes datos para analizar al jugador
     print(f'Se han recuperado {len(matches)} partidas de {name}')
-    return matches
+    sortedMatches = dict(sorted(matches.items(), key=lambda x: x[0], reverse=True))
+    return sortedMatches
 
 
 def getMatchesPosition(name, puuid, matches):
@@ -1897,7 +1899,6 @@ def plotImage(listName, pointList, color):
 
 
 def plotHeatMap(listName, pointList):
-    # TODO El problema es que se plotean los puntos de todos los mapas de calor anteriores, por lo que habría que hacer un plt.clear o algo similar
     plt.clf()
     scaleFactor = 10
     imagePath = '../lib/map/map.png'
@@ -1940,6 +1941,8 @@ def drawKillsHeatmaps(puuid, matches):
     redDeathPositions = []
     for matchID, matchData in matches.items():
         matchTimeline = api.getMatchTimeline(matchID)
+        if matchTimeline is None:
+            continue
         playerID = 0
         for index, participant in enumerate(matchTimeline['metadata']['participants']):
             if participant == puuid:
@@ -1972,7 +1975,7 @@ def drawKillsHeatmaps(puuid, matches):
                     except KeyError:
                         continue
         i += 1
-        if i >= 8:
+        if i >= 7:
             break
 
     # plotHeatMap('blueKillPositions', blueKillPositions)
