@@ -6,9 +6,9 @@ from flask import Flask, jsonify, make_response
 from flask_cors import CORS
 from markupsafe import escape
 
-from app import api
-from app import database
-from app import proc_data
+import api
+import database
+import proc_data
 
 app = Flask(__name__)
 CORS(app)
@@ -159,7 +159,7 @@ def getQuickPlayerData(username, riotId):
 @app.route('/<username>/<riotId>/heatmaps')
 def getHeatmapsImgs(username, riotId):
     puuid = api.getSummonerPUUID(username, riotId)
-    matches = database.getNPlayersGames(puuid, 5)
+    matches = database.getNPlayersGames(puuid, 7)
     print(len(matches))
     images = proc_data.drawKillsHeatmaps(puuid, matches)
     encoded_images = {key: base64.b64encode(value.getvalue()).decode('utf-8') for key, value in images.items()}
