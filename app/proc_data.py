@@ -195,8 +195,7 @@ def getMatchesPosition(name, puuid, matches):
         f"Support: {suppNorm + suppSolo + suppFlex} veces ({perSupp} %)\n"
         f"Línea desconocida: {unknown} veces ({perUnknownPosition} %)\n"
     )
-
-    dicPos = {
+    dicPos = {'positions': {
         'TOP': {'Normal': topNorm, 'SoloDuo': topSolo, 'Flex': topFlex, 'Total': (topNorm + topSolo + topFlex)},
         'JUNGLE': {'Normal': jungleNorm, 'SoloDuo': jungleSolo, 'Flex': jungleFlex,
                    'Total': (jungleNorm + jungleSolo + jungleFlex)},
@@ -204,9 +203,26 @@ def getMatchesPosition(name, puuid, matches):
         'BOTTOM': {'Normal': adcNorm, 'SoloDuo': adcSolo, 'Flex': adcFlex, 'Total': (adcNorm + adcSolo + adcFlex)},
         'UTILITY': {'Normal': suppNorm, 'SoloDuo': suppSolo, 'Flex': suppFlex,
                     'Total': (suppNorm + suppSolo + suppFlex)}
-    }
+    }}
 
     return dicPos
+
+
+def plot_positions(dicPos, name):
+    positions = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
+    positionsBar = ['Top', 'Jungle', 'Mid', 'Bottom', 'Support']
+    totals = [dicPos['positions'][pos]['Total'] for pos in positions]
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(positionsBar, totals, color=['blue', 'green', 'red', 'purple', 'orange'])
+    plt.xlabel('Positions')
+    plt.ylabel('Number of games')
+    plt.title('Games per position')
+
+    buffer = BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+    return buffer
 
 
 def getMatchPlayerInfo(puuid, match):
