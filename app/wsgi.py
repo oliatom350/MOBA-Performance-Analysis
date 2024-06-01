@@ -97,10 +97,11 @@ def getMatchesPosition(username, riotId):
     puuid = api.getSummonerPUUID(username, riotId)
     matches = database.getAllPlayersGames(puuid)
     dicPos = proc_data.getMatchesPosition(username, puuid, matches)
+    dicPosFinal = {'positions': dicPos}
     imgIO = proc_data.plot_positions(dicPos, username)
     encodedImg = base64.b64encode(imgIO.getvalue()).decode('utf-8')
-    dicPos['imagen'] = encodedImg
-    return dicPos
+    dicPosFinal['imagen'] = encodedImg
+    return dicPosFinal
 
 
 @app.route('/<username>/<riotId>/KDA')
